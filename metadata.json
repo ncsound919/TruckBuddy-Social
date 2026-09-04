@@ -1,0 +1,6 @@
+{
+  "name": "Truckers Social Association",
+  "description": "The professional social network, road reporting, and marketplace hub for the trucking community.",
+  "requestFramePermissions": ["geolocation"],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
