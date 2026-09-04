@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
-import { RoadReport, RoadReportType } from '../types';
-import { sampleRoadReports, currentUserProfile } from '../data';
+import { RoadReport, RoadReportType } from '../../types';
+import { sampleRoadReports, currentUserProfile } from '../../data';
 import { AlertTriangle, ShieldAlert, Navigation, Compass, Star, ChevronUp, PlusCircle, Check, X, MapPin } from 'lucide-react';
 
 export default function RoadReportsSection() {

@@ -1,7 +1,8 @@
 import React, { useState, useEffect } from 'react';
-import { Listing } from '../types';
-import { sampleListings, currentUserProfile } from '../data';
+import { Listing } from '../../types';
+import { sampleListings, currentUserProfile } from '../../data';
 import { Tag, Search, Phone, MessageSquare, DollarSign, PlusCircle, Check, X, MapPin } from 'lucide-react';
+import { db } from '../../lib/supabase';
 
 export default function MarketplaceSection() {
   const [listings, setListings] = useState<Listing[]>([]);
@@ -25,21 +26,30 @@ export default function MarketplaceSection() {
   const [contactSent, setContactSent] = useState(false);
 
   useEffect(() => {
-    const cached = localStorage.getItem('trucker_listings');
-    if (cached) {
-      setListings(JSON.parse(cached));
-    } else {
-      setListings(sampleListings);
-      localStorage.setItem('trucker_listings', JSON.stringify(sampleListings));
-    }
+    const fetchListings = async () => {
+      const { data, error } = await db.from('listings').select('*');
+      if (data && data.length > 0) {
+        setListings(data);
+        localStorage.setItem('trucker_listings', JSON.stringify(data));
+      } else {
+        const cached = localStorage.getItem('trucker_listings');
+        if (cached) {
+          setListings(JSON.parse(cached));
+        } else {
+          setListings(sampleListings);
+          localStorage.setItem('trucker_listings', JSON.stringify(sampleListings));
+        }
+      }
+    };
+    fetchListings();
   }, []);
 
-  const saveListings = (updated: Listing[]) => {
+  const saveListings = async (updated: Listing[]) => {
     setListings(updated);
     localStorage.setItem('trucker_listings', JSON.stringify(updated));
   };
 
-  const handleCreateListing = (e: React.FormEvent) => {
+  const handleCreateListing = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!title.trim() || !price || !location.trim()) return;
 
@@ -58,6 +68,7 @@ export default function MarketplaceSection() {
 
     const updated = [newListing, ...listings];
     saveListings(updated);
+    db.from('listings').insert(newListing);
 
     // Reset
     setTitle('');

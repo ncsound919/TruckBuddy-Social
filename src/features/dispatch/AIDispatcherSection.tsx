@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { ChatMessage } from '../types';
+import { ChatMessage } from '../../types';
 import { Truck, Send, HelpCircle, Shield, AlertTriangle, CloudRain, Scale } from 'lucide-react';
 
 export default function AIDispatcherSection() {

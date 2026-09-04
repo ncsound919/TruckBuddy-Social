@@ -1,9 +1,13 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { MessageThread, DirectMessage, Profile } from '../types';
-import { initialMessageThreads, initialDirectMessages } from '../data';
+import { MessageThread, DirectMessage, Profile } from '../../types';
+import { initialMessageThreads, initialDirectMessages } from '../../data';
 import { MessageSquare, Send, Users, ShieldAlert, Check, Clock, UserCheck } from 'lucide-react';
 
-export default function MessengerSection() {
+interface MessengerSectionProps {
+  isDeadZone?: boolean;
+}
+
+export default function MessengerSection({ isDeadZone = false }: MessengerSectionProps) {
   const [threads, setThreads] = useState<MessageThread[]>([]);
   const [messages, setMessages] = useState<DirectMessage[]>([]);
   const [selectedThread, setSelectedThread] = useState<MessageThread | null>(null);
@@ -60,6 +64,34 @@ export default function MessengerSection() {
       text: inputText.trim(),
       createdAt: new Date().toISOString()
     };
+
+    if (isDeadZone) {
+      const offlineMsg: DirectMessage = {
+        ...userMsg,
+        id: `offline-${userMsg.id}`
+      };
+      const currentOffline = JSON.parse(localStorage.getItem('trucker_offline_messages') || '[]');
+      localStorage.setItem('trucker_offline_messages', JSON.stringify([...currentOffline, offlineMsg]));
+      
+      const updatedDMs = [...messages, offlineMsg];
+      saveDMs(updatedDMs);
+      
+      const updatedThreads = threads.map(t => {
+        if (t.id === selectedThread.id) {
+          return {
+            ...t,
+            lastMessageText: `[Queued] ${offlineMsg.text}`,
+            lastMessageTime: offlineMsg.createdAt,
+            unreadCount: 0
+          };
+        }
+        return t;
+      });
+      saveThreads(updatedThreads);
+      setSelectedThread(updatedThreads.find(t => t.id === selectedThread.id) || null);
+      setInputText('');
+      return;
+    }
 
     const updatedDMs = [...messages, userMsg];
     saveDMs(updatedDMs);
@@ -255,21 +287,35 @@ export default function MessengerSection() {
               </span>
             </div>
 
+            {/* CELLULAR SIGNAL LOST WARNING */}
+            {isDeadZone && (
+              <div className="bg-amber-50 border-y border-amber-200 text-amber-800 text-[10px] font-bold py-2 px-5 flex items-center justify-between">
+                <span>⚠️ Cellular signal lost. Messages are being saved to your Offline Outbox.</span>
+                <span className="text-[9px] uppercase tracking-wider bg-amber-200/50 px-1.5 py-0.5 rounded">Dead-Zone Active</span>
+              </div>
+            )}
+
             {/* MESSAGES LIST PANEL */}
             <div className="flex-1 overflow-y-auto p-5 space-y-3 bg-zinc-50/50" id="chat-messages-board">
               {activeMessages.map(dm => {
                 const isMe = dm.senderId === 'user-123';
+                const isOffline = dm.id.startsWith('offline-');
                 return (
                   <div key={dm.id} className={`flex max-w-[80%] ${isMe ? 'ml-auto justify-end' : ''}`}>
-                    <div className={`p-3.5 rounded-2xl text-xs leading-relaxed font-normal shadow-sm ${
+                    <div className={`p-3.5 rounded-2xl text-xs leading-relaxed font-normal shadow-sm relative ${
                       isMe
                         ? 'bg-slate-900 text-white rounded-br-none'
                         : 'bg-white border border-zinc-100 text-slate-800 rounded-bl-none'
                     }`}>
                       <p>{dm.text}</p>
-                      <span className="block text-[8px] text-zinc-400 text-right mt-1.5">
-                        {new Date(dm.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
-                      </span>
+                      <div className="flex items-center justify-end space-x-1.5 mt-1.5">
+                        {isOffline && (
+                          <span className="text-[8px] text-amber-400 font-bold uppercase tracking-wider">Queued Offline ⏳</span>
+                        )}
+                        <span className="block text-[8px] text-zinc-400">
+                          {new Date(dm.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                        </span>
+                      </div>
                     </div>
                   </div>
                 );

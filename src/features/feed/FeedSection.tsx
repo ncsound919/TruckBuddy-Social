@@ -1,16 +1,21 @@
 import React, { useState, useEffect } from 'react';
-import { Post, PostComment, Profile } from '../types';
-import { samplePosts, sampleComments, currentUserProfile } from '../data';
-import { Heart, MessageSquare, MapPin, Tag, Image, Clock, Share2, PlusCircle, CheckCircle, ChevronRight, X } from 'lucide-react';
+import { Post, PostComment, Profile } from '../../types';
+import { samplePosts, sampleComments, currentUserProfile } from '../../data';
+import { useModeration } from '../../hooks/useModeration';
+import { db } from '../../lib/supabase';
+import { Heart, MessageSquare, MapPin, Tag, Image, Clock, Share2, PlusCircle, CheckCircle, ChevronRight, X, AlertTriangle } from 'lucide-react';
 
 interface FeedSectionProps {
   onNotificationAdd: (message: string, type: 'like' | 'comment') => void;
+  isDeadZone?: boolean;
 }
 
-export default function FeedSection({ onNotificationAdd }: FeedSectionProps) {
+export default function FeedSection({ onNotificationAdd, isDeadZone = false }: FeedSectionProps) {
+  const { fileReport } = useModeration();
   const [posts, setPosts] = useState<Post[]>([]);
   const [comments, setComments] = useState<Record<string, PostComment[]>>({});
   const [activeTab, setActiveTab] = useState<'for_you' | 'following'>('for_you');
+  const [toastMsg, setToastMsg] = useState<string | null>(null);
   
   // Post composer state
   const [isComposerOpen, setIsComposerOpen] = useState(false);
@@ -25,24 +30,58 @@ export default function FeedSection({ onNotificationAdd }: FeedSectionProps) {
   const [openCommentsPostId, setOpenCommentsPostId] = useState<string | null>(null);
   const [newCommentText, setNewCommentText] = useState('');
 
-  // Load from localStorage or initial seed
   useEffect(() => {
-    const cachedPosts = localStorage.getItem('trucker_posts');
-    const cachedComments = localStorage.getItem('trucker_comments');
-
-    if (cachedPosts) {
-      setPosts(JSON.parse(cachedPosts));
-    } else {
-      setPosts(samplePosts);
-      localStorage.setItem('trucker_posts', JSON.stringify(samplePosts));
+    if (toastMsg) {
+      const timer = setTimeout(() => setToastMsg(null), 4000);
+      return () => clearTimeout(timer);
     }
+  }, [toastMsg]);
 
-    if (cachedComments) {
-      setComments(JSON.parse(cachedComments));
-    } else {
-      setComments(sampleComments);
-      localStorage.setItem('trucker_comments', JSON.stringify(sampleComments));
-    }
+  // Load from Supabase DB (with local seed fallback handled automatically by our db client)
+  useEffect(() => {
+    const loadData = async () => {
+      // Fetch posts
+      const { data: postsData, error: postsError } = await db
+        .from('posts')
+        .select('*')
+        .order('createdAt', { ascending: false });
+
+      if (!postsError && postsData && postsData.length > 0) {
+        setPosts(postsData);
+      } else {
+        // Fallback to sample seed data if DB is empty or fails
+        setPosts(samplePosts);
+        localStorage.setItem('trucker_posts', JSON.stringify(samplePosts));
+        await db.from('posts').insert(samplePosts);
+      }
+
+      // Fetch comments
+      const { data: commentsData, error: commentsError } = await db
+        .from('comments')
+        .select('*');
+
+      if (!commentsError && commentsData && commentsData.length > 0) {
+        // Group comments by postId
+        const grouped: Record<string, PostComment[]> = {};
+        commentsData.forEach((c: any) => {
+          if (!grouped[c.postId]) {
+            grouped[c.postId] = [];
+          }
+          grouped[c.postId].push(c);
+        });
+        setComments(grouped);
+      } else {
+        setComments(sampleComments);
+        localStorage.setItem('trucker_comments', JSON.stringify(sampleComments));
+        // Flat insert sample comments for seeding
+        const flatComments = Object.entries(sampleComments).flatMap(([postId, list]) => 
+          list.map(c => ({ ...c, postId }))
+        );
+        await db.from('comments').insert(flatComments);
+      }
+    };
+
+    loadData();
   }, []);
 
   const savePosts = (updatedPosts: Post[]) => {
@@ -56,7 +95,7 @@ export default function FeedSection({ onNotificationAdd }: FeedSectionProps) {
   };
 
   // Like / Unlike action
-  const handleLike = (postId: string) => {
+  const handleLike = async (postId: string) => {
     const updatedPosts = posts.map(post => {
       if (post.id === postId) {
         const hasLiked = post.likesUsers.includes(currentUserProfile.id);
@@ -74,6 +113,10 @@ export default function FeedSection({ onNotificationAdd }: FeedSectionProps) {
             onNotificationAdd(`${currentUserProfile.displayName} liked your post: "${post.caption.slice(0, 30)}..."`, 'like');
           }
         }
+        
+        // Asynchronously update Supabase
+        db.from('posts').update({ likeCount, likesUsers }).eq('id', postId);
+        
         return { ...post, likeCount, likesUsers };
       }
       return post;
@@ -82,7 +125,7 @@ export default function FeedSection({ onNotificationAdd }: FeedSectionProps) {
   };
 
   // Submit comment
-  const handleSubmitComment = (postId: string) => {
+  const handleSubmitComment = async (postId: string) => {
     if (!newCommentText.trim()) return;
 
     const newComment: PostComment = {
@@ -92,6 +135,9 @@ export default function FeedSection({ onNotificationAdd }: FeedSectionProps) {
       body: newCommentText.trim(),
       createdAt: new Date().toISOString(),
     };
+
+    // Save locally and in Supabase
+    await db.from('comments').insert({ ...newComment, postId });
 
     const postComments = comments[postId] ? [...comments[postId]] : [];
     const updatedComments = {
@@ -105,11 +151,12 @@ export default function FeedSection({ onNotificationAdd }: FeedSectionProps) {
     // Update comment counter in post
     const updatedPosts = posts.map(post => {
       if (post.id === postId) {
-        // Trigger notification if comment on other trucker's post
         if (post.author.id !== currentUserProfile.id) {
           onNotificationAdd(`${currentUserProfile.displayName} commented: "${newComment.body.slice(0, 30)}..."`, 'comment');
         }
-        return { ...post, commentCount: post.commentCount + 1 };
+        const updatedPost = { ...post, commentCount: post.commentCount + 1 };
+        db.from('posts').update({ commentCount: post.commentCount + 1 }).eq('id', postId);
+        return updatedPost;
       }
       return post;
     });
@@ -132,17 +179,34 @@ export default function FeedSection({ onNotificationAdd }: FeedSectionProps) {
 
     setIsCompressing(true);
     const reader = new FileReader();
-    reader.onload = () => {
-      setTimeout(() => {
-        setMediaSimUrl(reader.result as string);
+    reader.onload = (event) => {
+      const img = new globalThis.Image();
+      img.onload = () => {
+        const canvas = document.createElement('canvas');
+        const MAX_WIDTH = 800;
+        const scale = img.width > MAX_WIDTH ? MAX_WIDTH / img.width : 1;
+        
+        canvas.width = img.width * scale;
+        canvas.height = img.height * scale;
+        
+        const ctx = canvas.getContext('2d');
+        if (ctx) {
+          ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+          // Compress to WebP (60% quality) or fallback to JPEG
+          const compressed = canvas.toDataURL('image/webp', 0.6);
+          setMediaSimUrl(compressed);
+        } else {
+          setMediaSimUrl(event.target?.result as string);
+        }
         setIsCompressing(false);
-      }, 800);
+      };
+      img.src = event.target?.result as string;
     };
     reader.readAsDataURL(file);
   };
 
   // Submit new post
-  const handleCreatePost = (e: React.FormEvent) => {
+  const handleCreatePost = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!caption.trim() && !mediaSimUrl) return;
 
@@ -168,8 +232,17 @@ export default function FeedSection({ onNotificationAdd }: FeedSectionProps) {
       createdAt: new Date().toISOString(),
     };
 
-    const updatedPosts = [newPost, ...posts];
-    savePosts(updatedPosts);
+    if (isDeadZone) {
+      const currentQueue = JSON.parse(localStorage.getItem('trucker_offline_media_queue') || '[]');
+      const updatedQueue = [newPost, ...currentQueue];
+      localStorage.setItem('trucker_offline_media_queue', JSON.stringify(updatedQueue));
+      setToastMsg('⚠️ Cellular Dead-Zone Active: Saved post to Offline Upload Queue! It will automatically sync once signal returns.');
+    } else {
+      await db.from('posts').insert(newPost);
+      const updatedPosts = [newPost, ...posts];
+      savePosts(updatedPosts);
+      setToastMsg('📡 Post published successfully to Road Feed!');
+    }
 
     // Reset fields
     setCaption('');
@@ -186,6 +259,13 @@ export default function FeedSection({ onNotificationAdd }: FeedSectionProps) {
 
   return (
     <div className="space-y-6" id="feed-container">
+      {toastMsg && (
+        <div className="bg-amber-500 text-slate-950 px-4 py-3 rounded-xl font-bold text-xs shadow-md flex items-center justify-between">
+          <span>{toastMsg}</span>
+          <button onClick={() => setToastMsg(null)} className="font-extrabold uppercase ml-2 text-[10px] hover:opacity-80">✕</button>
+        </div>
+      )}
+
       {/* Feed Navigation and Action Bar */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 bg-white p-4 rounded-xl shadow-sm border border-zinc-100" id="feed-header-bar">
         <div className="flex space-x-1 bg-zinc-100 p-1 rounded-lg self-start" id="feed-tabs">
@@ -505,10 +585,24 @@ export default function FeedSection({ onNotificationAdd }: FeedSectionProps) {
                     </button>
                   </div>
 
-                  <button className="flex items-center space-x-1.5 py-1.5 px-2.5 rounded-lg hover:text-slate-900 hover:bg-zinc-50 transition-colors">
-                    <Share2 className="w-4 h-4" />
-                    <span className="hidden sm:inline">Share Link</span>
-                  </button>
+                  <div className="flex items-center space-x-2">
+                    <button className="flex items-center space-x-1.5 py-1.5 px-2.5 rounded-lg hover:text-slate-900 hover:bg-zinc-50 transition-colors">
+                      <Share2 className="w-4 h-4" />
+                      <span className="hidden sm:inline">Share Link</span>
+                    </button>
+                    
+                    <button
+                      onClick={() => {
+                        fileReport(post.id, 'post', 'Inappropriate content flagged by community driver');
+                        setToastMsg('⚠️ Broadcast update flagged and submitted to the district moderation queue.');
+                      }}
+                      className="flex items-center space-x-1.5 py-1.5 px-2.5 rounded-lg hover:text-rose-600 hover:bg-rose-50 text-zinc-400 transition-colors"
+                      title="Report Broadcast"
+                    >
+                      <AlertTriangle className="w-3.5 h-3.5" />
+                      <span className="hidden sm:inline">Flag</span>
+                    </button>
+                  </div>
                 </div>
 
                 {/* THREADED COMMENTS PANEL */}

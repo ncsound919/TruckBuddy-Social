@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
-import { Profile, Post } from '../types';
-import { currentUserProfile } from '../data';
+import { Profile, Post } from '../../types';
+import { currentUserProfile } from '../../data';
 import { Edit2, ShieldCheck, Mail, MapPin, Truck, Compass, CheckCircle2, ChevronRight, Check, X } from 'lucide-react';
 
 export default function ProfileSection() {

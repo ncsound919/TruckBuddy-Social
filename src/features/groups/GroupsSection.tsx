@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
-import { Group, Post } from '../types';
-import { sampleGroups, samplePosts } from '../data';
+import { Group, Post } from '../../types';
+import { sampleGroups, samplePosts } from '../../data';
 import { Users, Shield, ArrowRight, CheckCircle2, ChevronRight, X } from 'lucide-react';
 
 export default function GroupsSection() {
