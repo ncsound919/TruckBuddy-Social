@@ -2,7 +2,8 @@ import { initializeApp } from 'firebase/app';
 import { 
   getFirestore, collection, doc, setDoc, getDocs, getDoc, 
   onSnapshot, query, orderBy, limit, Timestamp, serverTimestamp, 
-  updateDoc, arrayUnion, arrayRemove, increment, addDoc, where 
+  updateDoc, arrayUnion, arrayRemove, increment, addDoc, where,
+  deleteDoc 
 } from 'firebase/firestore';
 import { getAuth, signInAnonymously, onAuthStateChanged, User as FirebaseUser, GoogleAuthProvider, signInWithPopup } from 'firebase/auth';
 import firebaseConfig from '../../firebase-applet-config.json';
@@ -19,7 +20,8 @@ import {
   RoadReport,
   ConvoyBeacon,
   ConvoyChatMessage,
-  DriverRoadStatus
+  DriverRoadStatus,
+  Listing
 } from '../types';
 import { currentUserProfile } from '../data';
 
@@ -123,14 +125,17 @@ export async function createLivePost(postData: Partial<Post>) {
   const payload = {
     id: newId,
     author: postData.author || currentUserProfile,
-    caption: postData.caption || '',
+    caption: postData.caption || postData.content || '',
     locationName: postData.locationName || 'Highway Dispatch',
     postType: postData.postType || 'text',
     tags: postData.tags || ['Dispatch'],
-    likeCount: 0,
-    commentCount: 0,
-    likesUsers: [],
-    createdAt: new Date().toISOString(),
+    likes: 0,
+    likesCount: 0,
+    isLiked: false,
+    commentsCount: 0,
+    shares: 0,
+    createdAt: Timestamp.now(),
+    serverCreatedAt: serverTimestamp(),
     mediaUrl: postData.mediaUrl || '',
     poll: postData.poll || null
   };
@@ -141,8 +146,9 @@ export async function createLivePost(postData: Partial<Post>) {
 export async function toggleLivePostLike(postId: string, userId: string, currentlyLiked: boolean) {
   const postRef = doc(db, 'posts', postId);
   await updateDoc(postRef, {
-    likeCount: increment(currentlyLiked ? -1 : 1),
-    likesUsers: currentlyLiked ? arrayRemove(userId) : arrayUnion(userId)
+    likes: increment(currentlyLiked ? -1 : 1),
+    likesCount: increment(currentlyLiked ? -1 : 1),
+    upvotedUserIds: currentlyLiked ? arrayRemove(userId) : arrayUnion(userId)
   });
 }
 
@@ -170,14 +176,14 @@ export async function addLiveComment(postId: string, commentData: Partial<PostCo
   
   const payload = {
     author: commentData.author || currentUserProfile,
-    body: commentData.body || '',
-    createdAt: new Date().toISOString(),
-    postId
+    body: commentData.body || commentData.text || commentData.content || '',
+    createdAt: Timestamp.now(),
+    likesCount: 0
   };
 
   const docAdded = await addDoc(commentsColl, payload);
   await updateDoc(postRef, {
-    commentCount: increment(1)
+    commentsCount: increment(1)
   });
   return docAdded.id;
 }
@@ -210,28 +216,29 @@ export async function createLiveSafetyReport(reportData: Partial<RoadReport>) {
   const payload = {
     id: newId,
     author: reportData.author || currentUserProfile,
-    reportType: reportData.reportType || 'hazard',
+    reportType: reportData.reportType || (reportData as any).type || 'hazard',
     title: reportData.title || 'Road Advisory',
     description: reportData.description || '',
     corridor: reportData.corridor || 'I-80',
     locationName: reportData.locationName || 'Mile Marker',
     lat: reportData.lat || 41.5,
     lng: reportData.lng || -106.5,
-    upvoteCount: 1,
-    upvotedUsers: [reportData.author?.id || currentUserProfile.id],
+    upvotes: 1,
+    downvotes: 0,
+    status: 'active',
     severity: reportData.severity || 'moderate',
-    createdAt: new Date().toISOString(),
-    expiresAt: new Date(Date.now() + 1000 * 60 * 60 * 4).toISOString() // 4 hours
+    createdAt: Timestamp.now(),
+    serverCreatedAt: serverTimestamp()
   };
   await setDoc(repRef, payload);
   return newId;
 }
 
-export async function voteLiveSafetyReport(reportId: string, userId: string, currentlyUpvoted: boolean) {
+export async function voteLiveSafetyReport(reportId: string, isUpvote: boolean) {
   const repRef = doc(db, 'safetyReports', reportId);
   await updateDoc(repRef, {
-    upvoteCount: increment(currentlyUpvoted ? -1 : 1),
-    upvotedUsers: currentlyUpvoted ? arrayRemove(userId) : arrayUnion(userId)
+    upvotes: isUpvote ? increment(1) : increment(0),
+    downvotes: !isUpvote ? increment(1) : increment(0)
   });
 }
 
@@ -413,4 +420,43 @@ export async function submitLiveMileageProof(entry: MileageProof, driver: Profil
     safeMiles: increment(entry.miles),
     updatedAt: serverTimestamp()
   }, { merge: true });
+}
+
+// ----------------------------------------------------------------------
+// REAL-TIME MARKETPLACE LISTINGS
+// ----------------------------------------------------------------------
+
+export function subscribeLiveListings(onUpdate: (listings: Listing[]) => void) {
+  const listingsQuery = query(collection(db, 'listings'), orderBy('createdAt', 'desc'), limit(100));
+  return onSnapshot(listingsQuery, (snapshot) => {
+    const list: Listing[] = [];
+    snapshot.forEach((docSnap) => {
+      const data = docSnap.data();
+      list.push({
+        id: docSnap.id,
+        ...data,
+        createdAt: data.createdAt?.toDate ? data.createdAt.toDate().toISOString() : data.createdAt || new Date().toISOString()
+      } as unknown as Listing);
+    });
+    onUpdate(list);
+  }, (err) => {
+    console.warn('Listings listener notice:', err);
+  });
+}
+
+export async function createLiveListing(listingData: Partial<Listing>) {
+  const newId = `list-${Date.now()}-${Math.random().toString(36).substring(2, 6)}`;
+  const listRef = doc(db, 'listings', newId);
+  const payload = {
+    id: newId,
+    ...listingData,
+    createdAt: Timestamp.now(),
+    serverCreatedAt: serverTimestamp()
+  };
+  await setDoc(listRef, payload);
+  return newId;
+}
+
+export async function deleteLiveListing(listingId: string) {
+  await deleteDoc(doc(db, 'listings', listingId));
 }

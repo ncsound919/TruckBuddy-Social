@@ -8,7 +8,7 @@ service cloud.firestore {
     // below. Collections referenced by src/lib/firebase.ts:
     // users, posts (+ /comments), roadStatuses, safetyReports,
     // convoys (+ /messages), memberLocations, mileageLeaderboard,
-    // mileageProofs
+    // mileageProofs, listings
     // ============================================================
     match /{document=**} {
       allow read, write: if false;
@@ -125,6 +125,22 @@ service cloud.firestore {
         || onlyKeys(['upvotes', 'downvotes'])
       );
       allow delete: if isOwner(resource.data.author.id);
+    }
+
+    // ============================================================
+    // MARKETPLACE LISTINGS
+    // TODO: MarketplaceSection still stamps listings with the
+    // legacy seed profile as seller, so create is signed-in-only
+    // for now. Tighten to seller.id == request.auth.uid once it
+    // uses useFirebase().
+    // ============================================================
+    match /listings/{listingId} {
+      allow read: if isSignedIn();
+      allow create: if isSignedIn()
+        && request.resource.data.title is string
+        && request.resource.data.title.size() <= 150
+        && request.resource.data.price is number;
+      allow update, delete: if isOwner(resource.data.seller.id);
     }
 
     // ============================================================
