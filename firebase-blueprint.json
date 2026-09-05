@@ -1,0 +1,82 @@
+{
+  "entities": {
+    "Post": {
+      "title": "Post",
+      "description": "A social feed update from a driver",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string", "description": "Unique post ID" },
+        "author": { "type": "object", "description": "Author profile" },
+        "content": { "type": "string", "description": "Post body text" },
+        "caption": { "type": "string" },
+        "locationName": { "type": "string" },
+        "postType": { "type": "string", "enum": ["text", "image", "video", "poll"] },
+        "tags": { "type": "array", "items": { "type": "string" } },
+        "likesCount": { "type": "number" },
+        "commentsCount": { "type": "number" },
+        "mediaUrl": { "type": "string" },
+        "createdAt": { "type": "string", "format": "date-time" },
+        "upvotedUserIds": { "type": "array", "items": { "type": "string" } }
+      },
+      "required": ["id", "author", "content", "createdAt"]
+    },
+    "RoadStatus": {
+      "title": "RoadStatus",
+      "description": "A temporary road status beacon",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "driver": { "type": "object" },
+        "statusText": { "type": "string" },
+        "corridor": { "type": "string" },
+        "mileMarker": { "type": "string" },
+        "emoji": { "type": "string" },
+        "mediaUrl": { "type": "string" },
+        "timestamp": { "type": "string", "format": "date-time" },
+        "waveCount": { "type": "number" },
+        "highBeamCount": { "type": "number" },
+        "hornCount": { "type": "number" },
+        "cheersCount": { "type": "number" },
+        "userInteractions": { "type": "object" }
+      },
+      "required": ["id", "driver", "statusText", "corridor", "timestamp"]
+    },
+    "UserProfile": {
+      "title": "UserProfile",
+      "description": "A driver's CDL profile",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "displayName": { "type": "string" },
+        "username": { "type": "string" },
+        "avatarUrl": { "type": "string" },
+        "bio": { "type": "string" },
+        "isVerified": { "type": "boolean" },
+        "yearsExperience": { "type": "number" },
+        "currentRig": { "type": "string" },
+        "primaryCorridor": { "type": "string" },
+        "safeMiles": { "type": "number" },
+        "badges": { "type": "array", "items": { "type": "string" } }
+      },
+      "required": ["id", "displayName", "username"]
+    }
+  },
+  "firestore": {
+    "posts": {
+      "schema": "Post",
+      "description": "Main feed posts"
+    },
+    "posts/{postId}/comments": {
+      "schema": "object",
+      "description": "Comments on a post"
+    },
+    "roadStatuses": {
+      "schema": "RoadStatus",
+      "description": "Active road status beacons"
+    },
+    "users": {
+      "schema": "UserProfile",
+      "description": "User profiles"
+    }
+  }
+}

@@ -1,0 +1,66 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    // 1. Default Deny
+    match /{document=**} {
+      allow read, write: if false;
+    }
+
+    // Helper functions
+    function isSignedIn() {
+      return request.auth != null;
+    }
+    
+    function isOwner(userId) {
+      return isSignedIn() && request.auth.uid == userId;
+    }
+
+    function isValidId(id) {
+      return id is string && id.size() <= 128 && id.matches('^[a-zA-Z0-9_\\-]+$');
+    }
+
+    // --- Users ---
+    match /users/{userId} {
+      allow read: if isSignedIn();
+      allow create, update: if isOwner(userId) && isValidUser(request.resource.data);
+    }
+
+    function isValidUser(data) {
+      return data.id == request.auth.uid 
+        && data.displayName is string && data.displayName.size() <= 100
+        && data.username is string && data.username.size() <= 50;
+    }
+
+    // --- Posts ---
+    match /posts/{postId} {
+      allow read: if isSignedIn();
+      allow create: if isSignedIn() && isValidPost(request.resource.data);
+      allow update: if isSignedIn() && (
+        (isOwner(resource.data.author.id) && isValidPost(request.resource.data)) ||
+        (request.resource.data.diff(resource.data).affectedKeys().hasOnly(['upvotedUserIds', 'likesCount', 'commentsCount']))
+      );
+      allow delete: if isOwner(resource.data.author.id);
+    }
+
+    function isValidPost(data) {
+      return data.author.id == request.auth.uid
+        && data.content is string && data.content.size() <= 2000;
+    }
+
+    // --- Road Statuses ---
+    match /roadStatuses/{statusId} {
+      allow read: if isSignedIn();
+      allow create: if isSignedIn() && isValidRoadStatus(request.resource.data);
+      allow update: if isSignedIn() && (
+        (isOwner(resource.data.driver.id) && isValidRoadStatus(request.resource.data)) ||
+        (request.resource.data.diff(resource.data).affectedKeys().hasOnly(['userInteractions', 'waveCount', 'highBeamCount', 'hornCount', 'cheersCount']))
+      );
+      allow delete: if isOwner(resource.data.driver.id);
+    }
+
+    function isValidRoadStatus(data) {
+      return data.driver.id == request.auth.uid
+        && data.statusText is string && data.statusText.size() <= 500;
+    }
+  }
+}

@@ -11,37 +11,18 @@ export default defineConfig(() => {
       tailwindcss(),
       VitePWA({
         registerType: 'autoUpdate',
-        includeAssets: ['favicon.ico', 'apple-touch-icon.png', 'icon.svg'],
+        includeAssets: [],
         manifest: {
           id: '/',
-          name: 'Truckers Social ATA Alliance Hub',
-          short_name: 'TruckerATA',
+          name: 'Truck Buddy Network',
+          short_name: 'TruckBuddy',
           description: 'A professional-grade social network and offline safety outbox utility for freight drivers.',
           theme_color: '#0f172a',
           background_color: '#f8fafc',
           display: 'standalone',
           start_url: '/',
           scope: '/',
-          icons: [
-            {
-              src: '/pwa-192x192.png',
-              sizes: '192x192',
-              type: 'image/png',
-              purpose: 'any',
-            },
-            {
-              src: '/pwa-512x512.png',
-              sizes: '512x512',
-              type: 'image/png',
-              purpose: 'any',
-            },
-            {
-              src: '/pwa-512x512.png',
-              sizes: '512x512',
-              type: 'image/png',
-              purpose: 'maskable',
-            },
-          ],
+          icons: [],
         },
         workbox: {
           globPatterns: ['**/*.{js,css,html,ico,png,svg,woff,woff2}'],

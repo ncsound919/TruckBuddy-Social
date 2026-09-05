@@ -134,18 +134,23 @@ export interface Post {
   groupId?: string; // If posted to a specific group/chapter
   postType: PostType;
   caption: string;
+  content?: string; // Legacy alias for caption
   tags: string[];
   locationName?: string;
   mediaUrl?: string;
   mediaType?: 'image' | 'video';
   likeCount: number;
+  likesCount?: number; // Legacy alias
   commentCount: number;
+  commentsCount?: number; // Legacy alias
   likesUsers: string[]; // List of user IDs who liked
   createdAt: string;
+  lastUpdated?: string; // Legacy alias
   poll?: PostPoll;
   audioNote?: PostAudioNote;
   reactions?: TruckerReactions;
   isBookmarked?: boolean;
+  isLiked?: boolean; // Legacy alias
 }
 
 export interface PostComment {
@@ -153,6 +158,8 @@ export interface PostComment {
   postId: string;
   author: Profile;
   body: string;
+  content?: string; // Legacy alias
+  text?: string; // Legacy alias
   createdAt: string;
 }
 
@@ -180,6 +187,9 @@ export interface RoadReport {
   description: string;
   locationName: string;
   corridor?: string; // e.g. "I-80", "I-10", "I-40", "I-70", "I-95", "I-5"
+  lat?: number;
+  lng?: number;
+  severity?: 'low' | 'moderate' | 'high' | 'critical';
   upvoteCount: number;
   upvotedUsers: string[];
   expiresAt: string;
@@ -282,6 +292,7 @@ export interface ConvoyBeacon {
   maxMembers: number;
   hazmatAllowed: boolean;
   oversizeAllowed: boolean;
+  cargoType?: string;
   status: 'forming' | 'rolling' | 'fueling_stop' | 'disbanded';
   notes: string;
   fuelSavingsPercent: number;
@@ -293,9 +304,14 @@ export interface ConvoyChatMessage {
   convoyId: string;
   sender: Profile;
   message: string;
+  text?: string;
+  audioFx?: any;
   isAlert?: boolean;
   timestamp: string;
 }
+
+export type Convoy = ConvoyBeacon;
+export type ConvoyMessage = ConvoyChatMessage;
 
 export interface CorridorDriverRadar {
   id: string;
@@ -347,6 +363,8 @@ export interface MileageProof {
   odometerStart: number;
   odometerEnd: number;
   milesLogged: number;
+  miles?: number; // Legacy alias for milesLogged
+  currentOdometer?: number; // Legacy alias for odometerEnd
   routeCorridor: string;
   originCity: string;
   destinationCity: string;

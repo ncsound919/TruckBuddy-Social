@@ -26,7 +26,7 @@ import {
   Wrench,
   Shirt
 } from 'lucide-react';
-import { db } from '../../lib/supabase';
+
 
 interface MarketplaceSectionProps {
   onViewProfile?: (profile: Profile) => void;
@@ -74,21 +74,7 @@ export default function MarketplaceSection({ onViewProfile }: MarketplaceSection
   useEffect(() => {
     const fetchListings = async () => {
       try {
-        const { data, error } = await db.from('listings').select('*');
-        if (!error && data && data.length > 0) {
-          setListings(data);
-          localStorage.setItem('trucker_listings', JSON.stringify(data));
-        } else {
-          const cached = localStorage.getItem('trucker_listings');
-          if (cached) {
-            setListings(JSON.parse(cached));
-          } else {
-            setListings(sampleListings);
-            localStorage.setItem('trucker_listings', JSON.stringify(sampleListings));
-          }
-        }
-      } catch (e) {
-        console.error('Failed to load listings from database, falling back to local storage:', e);
+        // Fallback to local storage/mock for now during migration
         const cached = localStorage.getItem('trucker_listings');
         if (cached) {
           setListings(JSON.parse(cached));
@@ -96,6 +82,9 @@ export default function MarketplaceSection({ onViewProfile }: MarketplaceSection
           setListings(sampleListings);
           localStorage.setItem('trucker_listings', JSON.stringify(sampleListings));
         }
+      } catch (e) {
+        console.error('Failed to load listings from database, falling back to local storage:', e);
+        setListings(sampleListings);
       }
     };
     fetchListings();
@@ -133,7 +122,7 @@ export default function MarketplaceSection({ onViewProfile }: MarketplaceSection
     saveListings(updated);
     
     try {
-      await db.from('listings').insert(newListing);
+      throw new Error("Migrate to Firebase!"); // ('listings').insert(newListing);
     } catch (e) {
       console.warn('Failed to insert listing to backend database, saved locally:', e);
     }
@@ -334,7 +323,7 @@ export default function MarketplaceSection({ onViewProfile }: MarketplaceSection
                 <div>
                   {/* Photo Header with badges */}
                   <div className="relative h-48 bg-zinc-100 border-b border-zinc-50 overflow-hidden">
-                    <img src={listing.mediaUrl} className="w-full h-full object-cover" alt={listing.title} referrerPolicy="no-referrer" />
+                    <img src={listing.mediaUrl || null} className="w-full h-full object-cover" alt={listing.title} referrerPolicy="no-referrer" />
                     
                     {/* Price tag */}
                     <div className="absolute top-3 right-3 flex items-center space-x-1">
@@ -432,7 +421,7 @@ export default function MarketplaceSection({ onViewProfile }: MarketplaceSection
                       className="flex items-center space-x-2 cursor-pointer group"
                       title={`View @${listing.seller.username}'s Profile & Timeline`}
                     >
-                      <img src={listing.seller.avatarUrl} className="w-6 h-6 rounded-full object-cover group-hover:ring-2 ring-amber-400 transition-all" alt="seller" />
+                      <img src={listing.seller.avatarUrl || null} className="w-6 h-6 rounded-full object-cover group-hover:ring-2 ring-amber-400 transition-all" alt="seller" />
                       <span className="text-[10px] text-zinc-500 font-medium truncate max-w-[85px] group-hover:text-amber-600 transition-colors">@{listing.seller.username}</span>
                     </div>
 

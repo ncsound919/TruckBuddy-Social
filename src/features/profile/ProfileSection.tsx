@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { Profile, Post, UserRole, InstructorInfo, CreatorInfo, CourseOffering } from '../../types';
 import { currentUserProfile, sampleProfiles } from '../../data';
+import { saveLiveProfile, subscribeLiveProfiles } from '../../lib/firebase';
 import DriverTimelineView from './DriverTimelineView';
 import { 
   Edit2, ShieldCheck, Mail, MapPin, Truck, Compass, CheckCircle2, 
@@ -123,7 +124,7 @@ export default function ProfileSection({ onViewProfile }: ProfileSectionProps = 
     }
   }, [profile.id]);
 
-  const handleSaveProfile = (e: React.FormEvent) => {
+  const handleSaveProfile = async (e: React.FormEvent) => {
     e.preventDefault();
     const updated: Profile = {
       ...profile,
@@ -161,6 +162,12 @@ export default function ProfileSection({ onViewProfile }: ProfileSectionProps = 
     localStorage.setItem('trucker_profile_cover', coverUrl);
     localStorage.setItem('trucker_profile_endorsements', JSON.stringify(endorsements));
     setIsEditOpen(false);
+    
+    try {
+      await saveLiveProfile(updated);
+    } catch (e) {
+      console.warn('Live profile save note:', e);
+    }
 
     const cachedPosts = localStorage.getItem('trucker_posts');
     if (cachedPosts) {
@@ -265,7 +272,7 @@ export default function ProfileSection({ onViewProfile }: ProfileSectionProps = 
         {/* Banner strip */}
         <div className="h-44 bg-slate-900 relative">
           <img 
-            src={coverUrl} 
+            src={coverUrl || null} 
             className="w-full h-full object-cover opacity-80" 
             alt="Trucker Cover Banner" 
             referrerPolicy="no-referrer"
@@ -297,7 +304,7 @@ export default function ProfileSection({ onViewProfile }: ProfileSectionProps = 
         <div className="px-6 pb-6 relative">
           <div className="flex flex-col sm:flex-row sm:items-end justify-between -mt-12 mb-4 gap-4">
             <img 
-              src={avatarUrl} 
+              src={avatarUrl || null} 
               className="w-24 h-24 rounded-full border-4 border-white shadow-md object-cover relative z-10" 
               alt={profile.displayName} 
               referrerPolicy="no-referrer"

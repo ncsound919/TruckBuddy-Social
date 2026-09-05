@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { Profile, Post, RoadReport, Listing, DriverMilestone, DriverTimelineItem, TimelineFilter } from '../../types';
-import { samplePosts, sampleRoadReports, sampleListings, sampleMilestones, currentUserProfile } from '../../data';
+import { sampleRoadReports, sampleListings, sampleMilestones, currentUserProfile } from '../../data';
 import { 
   Award, 
   Truck, 
@@ -50,7 +50,7 @@ export default function DriverTimelineView({ profile, isOwnProfile = false }: Dr
     if (cachedPosts) {
       allPosts = JSON.parse(cachedPosts);
     } else {
-      allPosts = samplePosts;
+      allPosts = [];
     }
     const userPosts = allPosts.filter(p => p.author.id === profile.id || p.author.username === profile.username);
 

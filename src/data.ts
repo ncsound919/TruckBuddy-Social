@@ -23,26 +23,27 @@ import {
   GroupEvent
 } from './types';
 
-export const CURRENT_USER_ID = 'user-123';
-
-export const currentUserProfile: Profile = {
-  id: CURRENT_USER_ID,
-  username: 'OverdriveWill',
-  displayName: 'Willie "Overdrive" Nelson',
-  avatarUrl: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&q=80&w=200',
-  bio: 'Hauling flatbeds since 2012. If it fits, it ships. Owner-Operator running mostly I-40 and I-80 routes.',
-  role: 'driver',
-  cdlClass: 'A',
-  yearsExperience: 14,
-  currentRig: '2022 Peterbilt 389 (Chrome Custom)',
-  homeBase: 'Nashville, TN',
-  lanes: ['I-40 East Coast', 'I-80 Midwest', 'I-75 South'],
-  carrierName: 'Independent / Apex Logistics',
-  isVerified: true,
-  followerCount: 342,
-  followingCount: 189,
-  postCount: 47,
+// DEPRECATED: Do not use. Use useFirebase() hook instead.
+export const currentUserProfile = {
+  id: 'legacy-null',
+  username: 'unknown',
+  displayName: 'Loading...',
+  avatarUrl: 'https://images.unsplash.com/photo-1591704253308-a56778f54117?auto=format&fit=crop&q=80&w=200',
+  bio: '',
+  role: 'driver' as any,
+  cdlClass: 'None' as any,
+  yearsExperience: 0,
+  currentRig: '',
+  homeBase: '',
+  lanes: [],
+  carrierName: '',
+  isVerified: false,
+  followerCount: 0,
+  followingCount: 0,
+  postCount: 0
 };
+
+export const CURRENT_USER_ID = 'user-123';
 
 export const sampleProfiles: Profile[] = [
   {
@@ -250,156 +251,7 @@ export const sampleGroups: Group[] = [
   }
 ];
 
-export const samplePosts: Post[] = [
-  {
-    id: 'post-1',
-    author: sampleProfiles[0], // DieselDuchess
-    postType: 'photo',
-    caption: 'Locked and loaded with this 120-foot wind turbine blade! Escorts are ready, route cleared through the mountain passes of Wyoming on I-80. Shoutout to the DOT guys who actually helped map this bypass.',
-    tags: ['#HeavyHaul', '#KenworthW900', '#WindTurbine', '#Wyoming', '#I80Corridor'],
-    locationName: 'I-80 Exit 355 (Laramie, WY)',
-    mediaUrl: 'https://images.unsplash.com/photo-1586528116311-ad8dd3c8310d?auto=format&fit=crop&q=80&w=800',
-    mediaType: 'image',
-    likeCount: 142,
-    commentCount: 2,
-    likesUsers: ['user-2', 'user-5'],
-    createdAt: '2026-09-04T10:30:00-07:00',
-    reactions: {
-      affirmative: 65,
-      hammerDown: 42,
-      airHorn: 38,
-      scaleAlert: 4,
-      safeTravels: 89,
-    },
-    audioNote: {
-      title: 'Elk Mountain Escort Radio Dispatch',
-      duration: '0:38',
-      speakerName: 'Sarah "Diesel Duchess"',
-      handle: 'Channel 19 Pilot',
-      transcript: 'Pilot cars in front and rear, wind speeds at 28 mph, keeping speed at 45 on the grades. Breaker 19, wide load passing mile marker 260.'
-    }
-  },
-  {
-    id: 'post-2',
-    author: sampleProfiles[2], // National_ATA
-    postType: 'text',
-    caption: '🚨 REGULATORY POLL: FMCSA is reviewing Hours of Service (HOS) split-sleeper berth provisions. How do you prefer to manage rest splits when running cross-country?',
-    tags: ['#RegulatoryPoll', '#FMCSA', '#HOS', '#OwnerOperator', '#TruckingAdvocacy'],
-    locationName: 'Washington, D.C.',
-    likeCount: 289,
-    commentCount: 5,
-    likesUsers: ['user-123'],
-    createdAt: '2026-09-04T08:15:00-07:00',
-    reactions: {
-      affirmative: 110,
-      hammerDown: 22,
-      airHorn: 45,
-      scaleAlert: 78,
-      safeTravels: 130,
-    },
-    poll: {
-      question: 'Which HOS sleeper split structure works best for highway safety?',
-      options: [
-        { id: 'opt-1', text: 'Flexible 7/3 or 8/2 split (Current Rule)', votes: 142 },
-        { id: 'opt-2', text: '5/5 or 6/4 equal split option', votes: 318 },
-        { id: 'opt-3', text: 'Driver-determined fatigue pause (stop the 14h clock)', votes: 524 }
-      ],
-      userVotedId: undefined,
-      totalVotes: 984
-    }
-  },
-  {
-    id: 'post-3',
-    author: sampleProfiles[3], // BrakeCheckRick
-    postType: 'photo',
-    caption: 'Stunning sunset pull-in at the Iowa 80 Truckstop tonight. Parking is filling up fast but managed to grab a spot near the back. Taking my 34-hour restart here to catch up on laundry, a hot shower, and maybe a movie. Highly recommend the prime rib tonight!',
-    tags: ['#Iowa80', '#VolvoVNL', '#SunsetHauling', '#34HourRestart', '#TruckerLife'],
-    locationName: 'Iowa 80 Truckstop (Walcott, IA)',
-    mediaUrl: 'https://images.unsplash.com/photo-1601584115197-04ecc0da31d7?auto=format&fit=crop&q=80&w=800',
-    mediaType: 'image',
-    likeCount: 95,
-    commentCount: 3,
-    likesUsers: ['user-2', 'user-3'],
-    createdAt: '2026-09-03T18:40:00-07:00',
-    reactions: {
-      affirmative: 38,
-      hammerDown: 14,
-      airHorn: 29,
-      scaleAlert: 2,
-      safeTravels: 56,
-    }
-  },
-  {
-    id: 'post-4',
-    author: sampleProfiles[1], // GearJammer_77
-    postType: 'road_report',
-    caption: 'Be careful heading East on I-40 through the gorge near the NC/TN line. Left lane is completely blocked due to rockslide debris. Traffic is backed up about 4 miles. Slow down before the curve at mile marker 7!',
-    tags: ['#I40Gorge', '#RoadHazard', '#Alert', '#NorthCarolina', '#SafetyFirst'],
-    locationName: 'I-40 East Mile Marker 7 (NC Line)',
-    likeCount: 64,
-    commentCount: 1,
-    likesUsers: ['user-123', 'user-5'],
-    createdAt: '2026-09-04T12:00:00-07:00',
-    reactions: {
-      affirmative: 45,
-      hammerDown: 5,
-      airHorn: 12,
-      scaleAlert: 88,
-      safeTravels: 92,
-    },
-    audioNote: {
-      title: 'CB 19 Voice Advisory: Rockslide Mile Marker 7',
-      duration: '0:22',
-      speakerName: 'Marcus Cruz (GearJammer)',
-      handle: 'Smokey & Road Watch',
-      transcript: 'All drivers Eastbound I-40, come off the throttle now. Left lane has boulders rolled across, DOT emergency crews staging at MM 6.'
-    }
-  }
-];
 
-export const sampleComments: Record<string, PostComment[]> = {
-  'post-1': [
-    {
-      id: 'comment-1',
-      postId: 'post-1',
-      author: currentUserProfile, // OverdriveWill
-      body: 'Incredible rig, Sarah! Those Kenworth heavy specs are built for the work. Be safe on those Wyomian slopes, the crosswinds have been brutal today.',
-      createdAt: '2026-09-04T10:45:00-07:00',
-    },
-    {
-      id: 'comment-2',
-      postId: 'post-1',
-      author: sampleProfiles[3], // BrakeCheckRick
-      body: 'That wind blade is no joke. Massive respect to the escort pilots as well. Safe driving!',
-      createdAt: '2026-09-04T11:15:00-07:00',
-    }
-  ],
-  'post-2': [
-    {
-      id: 'comment-3',
-      postId: 'post-2',
-      author: sampleProfiles[1], // GearJammer_77
-      body: 'We absolutely need 6/4 or even 5/5 sleeper splits. Forced 10-hour breaks when you are 30 minutes from home base because of a scale delay are exhausting.',
-      createdAt: '2026-09-04T08:35:00-07:00',
-    },
-    {
-      id: 'comment-4',
-      postId: 'post-2',
-      author: sampleProfiles[0], // DieselDuchess
-      body: 'Exactly! Let drivers decide when they are fatigued. The static clocks can cause major rush-hour gridlock risks.',
-      createdAt: '2026-09-04T09:02:00-07:00',
-    }
-  ],
-  'post-3': [
-    {
-      id: 'comment-5',
-      postId: 'post-3',
-      author: sampleProfiles[1], // GearJammer_77
-      body: 'Iowa 80 is like Disneyland for truckers. Enjoy the movie theater!',
-      createdAt: '2026-09-03T19:10:00-07:00',
-    }
-  ]
-};
 
 export const sampleRoadReports: RoadReport[] = [
   {
@@ -595,7 +447,7 @@ export const sampleNotifications: AppNotification[] = [
     recipientId: CURRENT_USER_ID,
     type: 'system',
     read: true,
-    message: 'Welcome to the Truckers Social Association! Complete your profile details in your profile tab to connect with nearby chapters.',
+    message: 'Welcome to the Truck Buddy Network Association! Complete your profile details in your profile tab to connect with nearby chapters.',
     createdAt: '2026-09-01T08:00:00-07:00',
   }
 ];

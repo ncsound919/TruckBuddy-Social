@@ -3,6 +3,11 @@ import { RoadReport, RoadReportType, Profile } from '../../types';
 import { sampleRoadReports, currentUserProfile } from '../../data';
 import { broadcastCbMessage } from '../../utils/cbAudio';
 import { 
+  subscribeLiveSafetyReports, 
+  createLiveSafetyReport, 
+  voteLiveSafetyReport 
+} from '../../lib/firebase';
+import { 
   AlertTriangle, 
   ShieldAlert, 
   Navigation, 
@@ -118,15 +123,15 @@ export default function RoadReportsSection({ onViewProfile }: RoadReportsSection
   const [statusValue, setStatusValue] = useState('');
   const [weighStatus, setWeighStatus] = useState<'open_pulling' | 'closed' | 'prepass_green' | 'level1_blitz'>('open_pulling');
 
-  // Load state from localStorage or seed
+  // Load real-time safety reports from Firestore
   useEffect(() => {
-    const cachedReports = localStorage.getItem('trucker_road_reports');
-    if (cachedReports) {
-      setReports(JSON.parse(cachedReports));
-    } else {
-      setReports(sampleRoadReports);
-      localStorage.setItem('trucker_road_reports', JSON.stringify(sampleRoadReports));
-    }
+    const unsubscribe = subscribeLiveSafetyReports((liveReports) => {
+      if (liveReports && liveReports.length > 0) {
+        setReports(liveReports);
+      } else {
+        setReports(sampleRoadReports);
+      }
+    });
 
     const cachedScales = localStorage.getItem('trucker_weigh_stations');
     if (cachedScales) {
@@ -135,11 +140,14 @@ export default function RoadReportsSection({ onViewProfile }: RoadReportsSection
       setWeighStations(INITIAL_WEIGH_STATIONS);
       localStorage.setItem('trucker_weigh_stations', JSON.stringify(INITIAL_WEIGH_STATIONS));
     }
+
+    return () => {
+      if (unsubscribe) unsubscribe();
+    };
   }, []);
 
   const saveReports = (updated: RoadReport[]) => {
     setReports(updated);
-    localStorage.setItem('trucker_road_reports', JSON.stringify(updated));
   };
 
   const saveWeighStations = (updated: WeighStationPreset[]) => {
@@ -147,14 +155,17 @@ export default function RoadReportsSection({ onViewProfile }: RoadReportsSection
     localStorage.setItem('trucker_weigh_stations', JSON.stringify(updated));
   };
 
-  // Upvote / Confirm report
-  const handleUpvote = (id: string) => {
+  // Upvote / Confirm report with live Firestore sync
+  const handleUpvote = async (id: string) => {
+    const report = reports.find(r => r.id === id);
+    if (!report) return;
+
+    const hasUpvoted = (report.upvotedUsers || []).includes(currentUserProfile.id);
     const updated = reports.map(r => {
       if (r.id === id) {
-        const hasUpvoted = r.upvotedUsers.includes(currentUserProfile.id);
-        let upvotedUsers = [...r.upvotedUsers];
-        let upvoteCount = r.upvoteCount;
-        let verifiedCount = r.verifiedByDriversCount || r.upvoteCount;
+        let upvotedUsers = [...(r.upvotedUsers || [])];
+        let upvoteCount = r.upvoteCount || r.upvotes || 0;
+        let verifiedCount = r.verifiedByDriversCount || upvoteCount;
 
         if (hasUpvoted) {
           upvotedUsers = upvotedUsers.filter(u => u !== currentUserProfile.id);
@@ -165,11 +176,17 @@ export default function RoadReportsSection({ onViewProfile }: RoadReportsSection
           upvoteCount += 1;
           verifiedCount += 1;
         }
-        return { ...r, upvoteCount, upvotedUsers, verifiedByDriversCount: verifiedCount };
+        return { ...r, upvoteCount, upvotes: upvoteCount, upvotedUsers, verifiedByDriversCount: verifiedCount };
       }
       return r;
     });
-    saveReports(updated);
+    setReports(updated);
+
+    try {
+      await voteLiveSafetyReport(id, !hasUpvoted);
+    } catch (e) {
+      console.warn('Live safety report vote sync notice:', e);
+    }
   };
 
   // Update Weigh Station Status in 1-click
@@ -273,8 +290,8 @@ export default function RoadReportsSection({ onViewProfile }: RoadReportsSection
     }
   };
 
-  // Submit report
-  const handleSubmitReport = (e: React.FormEvent) => {
+  // Submit report to live Firestore
+  const handleSubmitReport = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!title.trim() || !locationName.trim()) return;
 
@@ -295,8 +312,21 @@ export default function RoadReportsSection({ onViewProfile }: RoadReportsSection
       verifiedByDriversCount: 1
     };
 
-    const updated = [newReport, ...reports];
-    saveReports(updated);
+    try {
+      await createLiveSafetyReport({
+        author: currentUserProfile,
+        reportType: reportType,
+        title: newReport.title,
+        description: newReport.description,
+        corridor: newReport.corridor,
+        locationName: newReport.locationName,
+        severity: reportType === 'hazard' || reportType === 'weather' ? 'high' : 'moderate'
+      });
+    } catch (e) {
+      console.warn('Live report creation notice:', e);
+      const updated = [newReport, ...reports];
+      saveReports(updated);
+    }
 
     // Reset
     setTitle('');
@@ -691,7 +721,7 @@ export default function RoadReportsSection({ onViewProfile }: RoadReportsSection
                         title={`View @${report.author.username}'s Profile & Timeline`}
                       >
                         <img 
-                          src={report.author.avatarUrl} 
+                          src={report.author.avatarUrl || null} 
                           className="w-6 h-6 rounded-full object-cover group-hover:ring-2 ring-amber-400 transition-all" 
                           alt={report.author.displayName} 
                         />

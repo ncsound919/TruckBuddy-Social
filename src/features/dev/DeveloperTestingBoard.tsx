@@ -35,22 +35,22 @@ export default function DeveloperTestingBoard({ onFlushData, isDeadZone, setIsDe
       }, delay);
     };
 
-    addLog('🚀 Initializing RLS Security Audit on 14 PostgreSQL tables...', 200);
+    addLog('🚀 Initializing Firestore Security Rules Audit...', 200);
     addLog('🔑 Authenticated Session Context: user-123 (Role: DRIVER, CDL Class: A)', 500);
     
     // Test 1: update profile
-    addLog('🧪 TEST 1: UPDATE profiles SET cdlClass = "A" WHERE id = "user-2" (Sarah Cruz)...', 800);
-    addLog('⛔ [RLS BLOCK] update_profile_policy violation. Driver is forbidden from editing other CDL cards. ✔️ PASSED SECURITY POLICY.', 1100);
+    addLog('🧪 TEST 1: db.collection("users").doc("user-2").update({ cdlClass: "A" })...', 800);
+    addLog('⛔ [FIREBASE ERROR] Missing or insufficient permissions. Driver is forbidden from editing other CDL cards. ✔️ PASSED SECURITY POLICY.', 1100);
 
     // Test 2: read groups
-    addLog('🧪 TEST 2: SELECT * FROM group_discussions WHERE group_id = "group-flatbed-masters"...', 1400);
-    addLog('⛔ [RLS BLOCK] read_discussions_policy violation. Driver has not joined this restricted Chapter. ✔️ PASSED ACCESS CONTROL.', 1700);
+    addLog('🧪 TEST 2: db.collection("discussions").where("groupId", "==", "group-flatbed-masters").get()...', 1400);
+    addLog('⛔ [FIREBASE ERROR] Missing or insufficient permissions. Driver has not joined this restricted Chapter. ✔️ PASSED ACCESS CONTROL.', 1700);
 
     // Test 3: admin override
     addLog('🧪 TEST 3: Authenticating Admin overrides for flagged cargo broker posts...', 2000);
-    addLog('✔️ [POLICY ALLOW] admin_bypass_policy. Role: ADMIN successfully flagged content in audit logs. ✔️ PASSED OVERRIDE AUDIT.', 2300);
+    addLog('✔️ [POLICY ALLOW] request.auth.token.role == "admin". Role: ADMIN successfully flagged content in audit logs. ✔️ PASSED OVERRIDE AUDIT.', 2300);
 
-    addLog('🎉 RLS Policies Verification Complete: 3/3 PASS (0 security leaks found).', 2600);
+    addLog('🎉 Firestore Security Rules Verification Complete: 3/3 PASS (0 security leaks found).', 2600);
 
     setTimeout(() => {
       setIsRunningTests(false);

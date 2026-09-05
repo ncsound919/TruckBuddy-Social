@@ -16,6 +16,13 @@ import {
   sampleConvoyMessages 
 } from '../../data';
 import { 
+  subscribeLiveConvoys, 
+  createLiveConvoy, 
+  toggleLiveConvoyMembership, 
+  subscribeLiveConvoyMessages, 
+  sendLiveConvoyMessage 
+} from '../../lib/firebase';
+import { 
   Truck, 
   Radio, 
   Users, 
@@ -103,21 +110,13 @@ export default function ConvoyNetworkSection({
 
   // Load persistence
   useEffect(() => {
-    const cachedConvoys = localStorage.getItem('trucker_convoys');
-    if (cachedConvoys) {
-      setConvoys(JSON.parse(cachedConvoys));
-    } else {
-      setConvoys(sampleConvoys);
-      localStorage.setItem('trucker_convoys', JSON.stringify(sampleConvoys));
-    }
-
-    const cachedMessages = localStorage.getItem('trucker_convoy_messages');
-    if (cachedMessages) {
-      setConvoyMessages(JSON.parse(cachedMessages));
-    } else {
-      setConvoyMessages(sampleConvoyMessages);
-      localStorage.setItem('trucker_convoy_messages', JSON.stringify(sampleConvoyMessages));
-    }
+    const unsubscribeConvoys = subscribeLiveConvoys((liveConvoys) => {
+      if (liveConvoys && liveConvoys.length > 0) {
+        setConvoys(liveConvoys);
+      } else {
+        setConvoys(sampleConvoys);
+      }
+    });
 
     const cachedRadars = localStorage.getItem('trucker_corridor_radars');
     if (cachedRadars) {
@@ -134,16 +133,31 @@ export default function ConvoyNetworkSection({
       setEndorsements(samplePeerEndorsements);
       localStorage.setItem('trucker_peer_vouches', JSON.stringify(samplePeerEndorsements));
     }
+
+    return () => {
+      if (unsubscribeConvoys) unsubscribeConvoys();
+    };
   }, []);
+
+  useEffect(() => {
+    if (!activeConvoyId) return;
+    const unsubscribeMessages = subscribeLiveConvoyMessages(activeConvoyId, (liveMessages) => {
+      setConvoyMessages(prev => ({
+        ...prev,
+        [activeConvoyId]: liveMessages
+      }));
+    });
+    return () => {
+      if (unsubscribeMessages) unsubscribeMessages();
+    };
+  }, [activeConvoyId]);
 
   const saveConvoys = (updated: ConvoyBeacon[]) => {
     setConvoys(updated);
-    localStorage.setItem('trucker_convoys', JSON.stringify(updated));
   };
 
   const saveMessages = (updated: Record<string, ConvoyChatMessage[]>) => {
     setConvoyMessages(updated);
-    localStorage.setItem('trucker_convoy_messages', JSON.stringify(updated));
   };
 
   const saveVouches = (updated: PeerEndorsement[]) => {
@@ -152,7 +166,8 @@ export default function ConvoyNetworkSection({
   };
 
   // Join or Leave Convoy
-  const handleToggleJoinConvoy = (convoyId: string) => {
+  const handleToggleJoinConvoy = async (convoyId: string) => {
+    let joining = false;
     const updated = convoys.map(c => {
       if (c.id === convoyId) {
         const isMember = c.members.some(m => m.id === currentUserProfile.id);
@@ -166,6 +181,7 @@ export default function ConvoyNetworkSection({
             return c;
           }
           newMembers = [...c.members, currentUserProfile];
+          joining = true;
           showToast(`Joined convoy "${c.title}" on CB Ch. ${c.cbChannel}!`);
         }
         return { ...c, members: newMembers };
@@ -174,10 +190,15 @@ export default function ConvoyNetworkSection({
     });
 
     saveConvoys(updated);
+    try {
+      await toggleLiveConvoyMembership(convoyId, currentUserProfile, joining);
+    } catch (e) {
+      console.warn('Live convoy membership note:', e);
+    }
   };
 
   // Send message in Convoy Comms
-  const handleSendConvoyMessage = (e: React.FormEvent) => {
+  const handleSendConvoyMessage = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!convoyChatInput.trim() || !activeConvoyId) return;
 
@@ -197,6 +218,15 @@ export default function ConvoyNetworkSection({
 
     saveMessages(updatedMessages);
     setConvoyChatInput('');
+    
+    try {
+      await sendLiveConvoyMessage(activeConvoyId, {
+        sender: currentUserProfile,
+        message: newMsg.message
+      });
+    } catch (e) {
+      console.warn('Live convoy message send note:', e);
+    }
 
     // Audio chirp / squelch indicator simulation
     try {
@@ -224,7 +254,7 @@ export default function ConvoyNetworkSection({
   };
 
   // Launch Convoy Beacon
-  const handleLaunchBeacon = (e: React.FormEvent) => {
+  const handleLaunchBeacon = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!beaconTitle.trim() || !beaconOrigin.trim() || !beaconDestination.trim()) return;
 
@@ -249,8 +279,24 @@ export default function ConvoyNetworkSection({
       createdAt: new Date().toISOString()
     };
 
-    const updated = [newConvoy, ...convoys];
-    saveConvoys(updated);
+    try {
+      await createLiveConvoy({
+        title: newConvoy.title,
+        leader: currentUserProfile,
+        corridor: newConvoy.corridor,
+        cbChannel: newConvoy.cbChannel,
+        destination: newConvoy.destination,
+        origin: newConvoy.currentMileMarker,
+        cruisingSpeedMph: newConvoy.cruisingSpeedMph
+      });
+      showToast(`Convoy Beacon "${newConvoy.title}" is now broadcasting live!`);
+    } catch (e) {
+      console.warn('Live beacon creation note:', e);
+      const updated = [newConvoy, ...convoys];
+      saveConvoys(updated);
+      showToast(`Convoy Beacon "${newConvoy.title}" is now active!`);
+    }
+
     setActiveConvoyId(newConvoy.id);
     setIsBeaconModalOpen(false);
     showToast(`Convoy Beacon broadcasted on ${beaconCorridor} CB Ch. ${beaconChannel}!`);

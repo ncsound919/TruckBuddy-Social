@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
 import { 
   Profile, 
   MileageLeaderboardEntry, 
@@ -13,6 +13,10 @@ import {
   sampleOdometerPresets, 
   currentUserProfile 
 } from '../../data';
+import { 
+  subscribeLiveMileageLeaderboard, 
+  submitLiveMileageProof 
+} from '../../lib/firebase';
 import { 
   Trophy, 
   Medal, 
@@ -52,16 +56,25 @@ export default function MileageLeaderboardSection({
   onOpenDirectMessage,
   isDeadZone = false
 }: MileageLeaderboardSectionProps) {
-  // Leaderboard data state
-  const [leaderboard, setLeaderboard] = useState<MileageLeaderboardEntry[]>(() => {
-    const cached = localStorage.getItem('trucker_mileage_leaderboard');
-    return cached ? JSON.parse(cached) : sampleMileageLeaderboard;
-  });
-
+  // Leaderboard data state with live Firestore subscription
+  const [leaderboard, setLeaderboard] = useState<MileageLeaderboardEntry[]>(sampleMileageLeaderboard);
   const [proofs, setProofs] = useState<MileageProof[]>(() => {
     const cached = localStorage.getItem('trucker_mileage_proofs');
     return cached ? JSON.parse(cached) : sampleMileageProofs;
   });
+
+  useEffect(() => {
+    const unsubscribe = subscribeLiveMileageLeaderboard((liveEntries) => {
+      if (liveEntries && liveEntries.length > 0) {
+        setLeaderboard(liveEntries);
+      } else {
+        setLeaderboard(sampleMileageLeaderboard);
+      }
+    });
+    return () => {
+      if (unsubscribe) unsubscribe();
+    };
+  }, []);
 
   // Filters
   const [timeframe, setTimeframe] = useState<MileageTimeframe>('weekly');
@@ -214,7 +227,12 @@ export default function MileageLeaderboardSection({
     setProofs(updatedProofs);
     localStorage.setItem('trucker_mileage_proofs', JSON.stringify(updatedProofs));
 
-    // Update or insert into leaderboard
+    // Submit live to Firestore
+    submitLiveMileageProof(newProof, currentUserProfile).catch(e => {
+      console.warn('Live mileage proof sync note:', e);
+    });
+
+    // Optimistic Update or insert into leaderboard
     setLeaderboard(prev => {
       let found = false;
       const updated = prev.map(entry => {
@@ -226,6 +244,7 @@ export default function MileageLeaderboardSection({
             monthlyMiles: entry.monthlyMiles + milesDelta,
             annualMiles: entry.annualMiles + milesDelta,
             allTimeMiles: entry.allTimeMiles + milesDelta,
+            totalMiles: (entry.totalMiles || entry.allTimeMiles) + milesDelta,
             verifiedProofsCount: entry.verifiedProofsCount + 1,
             latestProof: newProof,
             streakDays: entry.streakDays + 1
@@ -244,6 +263,7 @@ export default function MileageLeaderboardSection({
           monthlyMiles: milesDelta,
           annualMiles: milesDelta,
           allTimeMiles: milesDelta,
+          totalMiles: milesDelta,
           driverCategory: 'owner_operator',
           verifiedProofsCount: 1,
           latestProof: newProof,
@@ -251,13 +271,11 @@ export default function MileageLeaderboardSection({
           streakDays: 1
         });
       }
-
-      localStorage.setItem('trucker_mileage_leaderboard', JSON.stringify(updated));
       return updated;
     });
 
     setIsSubmitModalOpen(false);
-    showToast(`🏆 Run Logged! +${milesDelta.toLocaleString()} verified miles added to your national standing!`);
+    showToast(`🏆 Run Logged! +${milesDelta.toLocaleString()} verified miles synced to live database & national leaderboard!`);
   };
 
   // Upvote proof

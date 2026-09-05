@@ -1,6 +1,10 @@
 import React, { useState, useEffect, useMemo, useRef } from 'react';
 import { MemberLocation, Profile, DriverMapStatus } from '../../types';
 import { sampleMemberLocations, currentUserProfile } from '../../data';
+import { 
+  subscribeLiveMemberLocations, 
+  updateLiveMemberLocation 
+} from '../../lib/firebase';
 import {
   MAP_BOUNDS,
   projectCoords,
@@ -63,11 +67,21 @@ export default function MemberMapSection({
   onOpenDirectMessage,
   isDeadZone = false
 }: MemberMapSectionProps) {
-  // Member locations state (initialized from localStorage or sample data)
-  const [locations, setLocations] = useState<MemberLocation[]>(() => {
-    const cached = localStorage.getItem('trucker_member_locations');
-    return cached ? JSON.parse(cached) : sampleMemberLocations;
-  });
+  // Member locations state with live Firestore subscription
+  const [locations, setLocations] = useState<MemberLocation[]>(sampleMemberLocations);
+
+  useEffect(() => {
+    const unsubscribe = subscribeLiveMemberLocations((liveLocs) => {
+      if (liveLocs && liveLocs.length > 0) {
+        setLocations(liveLocs);
+      } else {
+        setLocations(sampleMemberLocations);
+      }
+    });
+    return () => {
+      if (unsubscribe) unsubscribe();
+    };
+  }, []);
 
   // Location broadcasting toggle
   const [isSharingLocation, setIsSharingLocation] = useState<boolean>(() => {
@@ -160,20 +174,29 @@ export default function MemberMapSection({
   };
 
   // Handle sharing toggle
-  const handleToggleSharing = (enabled: boolean) => {
+  const handleToggleSharing = async (enabled: boolean) => {
     setIsSharingLocation(enabled);
     localStorage.setItem('trucker_broadcast_location', JSON.stringify(enabled));
     
+    let updatedLoc: MemberLocation | undefined;
     setLocations(prev => {
       const updated = prev.map(loc => {
         if (loc.driver.id === currentUserProfile.id) {
-          return { ...loc, isSharingLocation: enabled };
+          updatedLoc = { ...loc, isSharingLocation: enabled };
+          return updatedLoc;
         }
         return loc;
       });
-      localStorage.setItem('trucker_member_locations', JSON.stringify(updated));
       return updated;
     });
+
+    if (updatedLoc) {
+      try {
+        await updateLiveMemberLocation(updatedLoc);
+      } catch (e) {
+        console.warn('Live location sync note:', e);
+      }
+    }
 
     if (enabled) {
       showToast('🟢 Live 20 Broadcast Active: Verified CDL members can locate your rig along highway corridors.');
@@ -183,12 +206,13 @@ export default function MemberMapSection({
   };
 
   // Update current user's 20
-  const handleUpdateMy20 = (e: React.FormEvent) => {
+  const handleUpdateMy20 = async (e: React.FormEvent) => {
     e.preventDefault();
+    let updatedLoc: MemberLocation | undefined;
     setLocations(prev => {
       const updated = prev.map(loc => {
         if (loc.driver.id === currentUserProfile.id) {
-          return {
+          updatedLoc = {
             ...loc,
             status: userStatus,
             speedMph: userStatus === 'rolling' ? userSpeed : 0,
@@ -196,12 +220,21 @@ export default function MemberMapSection({
             statusNote: userStatusNote,
             lastUpdated: 'Just now'
           };
+          return updatedLoc;
         }
         return loc;
       });
-      localStorage.setItem('trucker_member_locations', JSON.stringify(updated));
       return updated;
     });
+
+    if (updatedLoc) {
+      try {
+        await updateLiveMemberLocation(updatedLoc);
+      } catch (e) {
+        console.warn('Live location sync note:', e);
+      }
+    }
+
     playAirHornSound();
     showToast('📡 10-4! Your 20 coordinates and status have updated on the National Radar.');
   };
