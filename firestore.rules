@@ -1,66 +1,186 @@
 rules_version = '2';
+
 service cloud.firestore {
   match /databases/{database}/documents {
-    // 1. Default Deny
+
+    // ============================================================
+    // DEFAULT DENY — every collection must be explicitly listed
+    // below. Collections referenced by src/lib/firebase.ts:
+    // users, posts (+ /comments), roadStatuses, safetyReports,
+    // convoys (+ /messages), memberLocations, mileageLeaderboard,
+    // mileageProofs
+    // ============================================================
     match /{document=**} {
       allow read, write: if false;
     }
 
-    // Helper functions
+    // ---------- Helpers ----------
     function isSignedIn() {
       return request.auth != null;
     }
-    
+
     function isOwner(userId) {
       return isSignedIn() && request.auth.uid == userId;
     }
 
-    function isValidId(id) {
-      return id is string && id.size() <= 128 && id.matches('^[a-zA-Z0-9_\\-]+$');
+    function changedKeys() {
+      return request.resource.data.diff(resource.data).affectedKeys();
     }
 
-    // --- Users ---
+    function onlyKeys(keys) {
+      return changedKeys().hasOnly(keys);
+    }
+
+    // ============================================================
+    // USERS
+    // ============================================================
     match /users/{userId} {
       allow read: if isSignedIn();
-      allow create, update: if isOwner(userId) && isValidUser(request.resource.data);
+      allow create, update: if isOwner(userId)
+        && request.resource.data.displayName is string
+        && request.resource.data.displayName.size() <= 100
+        && request.resource.data.username is string
+        && request.resource.data.username.size() <= 50;
+      allow delete: if false;
     }
 
-    function isValidUser(data) {
-      return data.id == request.auth.uid 
-        && data.displayName is string && data.displayName.size() <= 100
-        && data.username is string && data.username.size() <= 50;
-    }
-
-    // --- Posts ---
+    // ============================================================
+    // POSTS + COMMENTS
+    // (created by components that use the real Firebase profile,
+    //  so ownership is strictly enforced here)
+    // ============================================================
     match /posts/{postId} {
       allow read: if isSignedIn();
-      allow create: if isSignedIn() && isValidPost(request.resource.data);
+
+      allow create: if isSignedIn()
+        && request.resource.data.author.id == request.auth.uid
+        && request.resource.data.caption is string
+        && request.resource.data.caption.size() <= 2000;
+
       allow update: if isSignedIn() && (
-        (isOwner(resource.data.author.id) && isValidPost(request.resource.data)) ||
-        (request.resource.data.diff(resource.data).affectedKeys().hasOnly(['upvotedUserIds', 'likesCount', 'commentsCount']))
+        (
+          isOwner(resource.data.author.id)
+          && request.resource.data.caption is string
+          && request.resource.data.caption.size() <= 2000
+        )
+        ||
+        (
+          // Like / comment counters only, moving by at most +/- 1,
+          // so counters cannot be set to arbitrary values.
+          onlyKeys(['likes', 'likesCount', 'commentsCount', 'upvotedUserIds'])
+          && (!changedKeys().hasAny(['likes']) || (
+            request.resource.data.likes >= resource.data.likes - 1 &&
+            request.resource.data.likes <= resource.data.likes + 1))
+          && (!changedKeys().hasAny(['likesCount']) || (
+            request.resource.data.likesCount >= resource.data.likesCount - 1 &&
+            request.resource.data.likesCount <= resource.data.likesCount + 1))
+          && (!changedKeys().hasAny(['commentsCount']) || (
+            request.resource.data.commentsCount == resource.data.commentsCount + 1))
+        )
       );
+
       allow delete: if isOwner(resource.data.author.id);
+
+      match /comments/{commentId} {
+        allow read: if isSignedIn();
+        allow create: if isSignedIn()
+          && request.resource.data.author.id == request.auth.uid
+          && request.resource.data.body is string
+          && request.resource.data.body.size() <= 1000;
+        allow update, delete: if isOwner(resource.data.author.id);
+      }
     }
 
-    function isValidPost(data) {
-      return data.author.id == request.auth.uid
-        && data.content is string && data.content.size() <= 2000;
-    }
-
-    // --- Road Statuses ---
+    // ============================================================
+    // ROAD STATUS BEACONS (Driver Stories bar)
+    // (created by components that use the real Firebase profile,
+    //  so ownership is strictly enforced here)
+    // ============================================================
     match /roadStatuses/{statusId} {
       allow read: if isSignedIn();
-      allow create: if isSignedIn() && isValidRoadStatus(request.resource.data);
+      allow create: if isSignedIn()
+        && request.resource.data.driver.id == request.auth.uid
+        && request.resource.data.statusText is string
+        && request.resource.data.statusText.size() <= 500;
       allow update: if isSignedIn() && (
-        (isOwner(resource.data.driver.id) && isValidRoadStatus(request.resource.data)) ||
-        (request.resource.data.diff(resource.data).affectedKeys().hasOnly(['userInteractions', 'waveCount', 'highBeamCount', 'hornCount', 'cheersCount']))
+        isOwner(resource.data.driver.id)
+        || onlyKeys(['waveCount', 'highBeamCount', 'hornCount', 'cheersCount', 'userInteractions'])
       );
       allow delete: if isOwner(resource.data.driver.id);
     }
 
-    function isValidRoadStatus(data) {
-      return data.driver.id == request.auth.uid
-        && data.statusText is string && data.statusText.size() <= 500;
+    // ============================================================
+    // SAFETY / ROAD REPORTS
+    // TODO: the calling component still passes the legacy
+    // seed profile, so create is signed-in-only for now. Tighten
+    // to author.id == request.auth.uid once it uses useFirebase().
+    // ============================================================
+    match /safetyReports/{reportId} {
+      allow read: if isSignedIn();
+      allow create: if isSignedIn()
+        && request.resource.data.title is string
+        && request.resource.data.title.size() <= 200;
+      allow update: if isSignedIn() && (
+        isOwner(resource.data.author.id)
+        || onlyKeys(['upvotes', 'downvotes'])
+      );
+      allow delete: if isOwner(resource.data.author.id);
+    }
+
+    // ============================================================
+    // CONVOYS + CONVOY CHAT
+    // TODO: same legacy-profile caveat as safetyReports.
+    // ============================================================
+    match /convoys/{convoyId} {
+      allow read: if isSignedIn();
+      allow create: if isSignedIn()
+        && request.resource.data.title is string
+        && request.resource.data.title.size() <= 150;
+      allow update: if isSignedIn() && (
+        isOwner(resource.data.leader.id)
+        || onlyKeys(['members'])
+      );
+      allow delete: if isOwner(resource.data.leader.id);
+
+      match /messages/{messageId} {
+        allow read: if isSignedIn();
+        allow create: if isSignedIn()
+          && request.resource.data.message is string
+          && request.resource.data.message.size() <= 500;
+        allow update, delete: if isOwner(resource.data.sender.id);
+      }
+    }
+
+    // ============================================================
+    // MEMBER LOCATIONS (Live Map)
+    // TODO: same legacy-profile caveat — tighten to
+    // driver.id == request.auth.uid once MemberMapSection uses
+    // useFirebase() instead of the seed currentUserProfile.
+    // ============================================================
+    match /memberLocations/{locationId} {
+      allow read: if isSignedIn();
+      allow create, update: if isSignedIn()
+        && request.resource.data.driver is map;
+      allow delete: if isOwner(resource.data.driver.id);
+    }
+
+    // ============================================================
+    // MILEAGE LEADERBOARD + PROOFS
+    // TODO: same legacy-profile caveat.
+    // ============================================================
+    match /mileageLeaderboard/{entryId} {
+      allow read: if isSignedIn();
+      allow create, update: if isSignedIn()
+        && request.resource.data.driver is map;
+      allow delete: if false;
+    }
+
+    match /mileageProofs/{proofId} {
+      allow read: if isSignedIn();
+      allow create: if isSignedIn()
+        && request.resource.data.milesLogged is number;
+      allow update, delete: if isSignedIn()
+        && request.resource.data.userId == request.auth.uid;
     }
   }
 }
