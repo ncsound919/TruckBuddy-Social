@@ -132,7 +132,7 @@ export function broadcastCbMessage(
   window.speechSynthesis.cancel();
   playCbSquelch();
 
-  setTimeout(() => {
+  const timeoutId = setTimeout(() => {
     const utterance = new SpeechSynthesisUtterance(text);
     utterance.rate = 1.05;
     utterance.pitch = 0.92; // slightly deeper radio voice
@@ -154,6 +154,7 @@ export function broadcastCbMessage(
   }, 120);
 
   return () => {
+    clearTimeout(timeoutId);
     window.speechSynthesis.cancel();
     onEnd?.();
   };
@@ -290,6 +291,34 @@ export function playChannelClick() {
     osc.stop(ctx.currentTime + 0.03);
   } catch (e) {
     console.warn('Channel click sound not available', e);
+  }
+}
+
+/**
+ * Play a short high-pitched chirp for incoming/outgoing messages
+ */
+export function playMessageChirp() {
+  try {
+    const ctx = getAudioContext();
+    if (!ctx) return;
+
+    const osc = ctx.createOscillator();
+    const gain = ctx.createGain();
+    
+    osc.type = 'sine';
+    osc.frequency.setValueAtTime(800, ctx.currentTime);
+    osc.frequency.exponentialRampToValueAtTime(1200, ctx.currentTime + 0.08);
+    
+    gain.gain.setValueAtTime(0.05, ctx.currentTime);
+    gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.08);
+    
+    osc.connect(gain);
+    gain.connect(ctx.destination);
+    
+    osc.start();
+    osc.stop(ctx.currentTime + 0.09);
+  } catch (e) {
+    console.warn('Message chirp sound not available', e);
   }
 }
 

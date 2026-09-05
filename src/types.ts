@@ -19,7 +19,6 @@ export interface InstructorInfo {
   acceptingStudents?: boolean;
   hourlyRate?: string | number;
   courses?: InstructorCourse[];
-  courseOfferings?: InstructorCourse[];
 }
 
 export interface CreatorChannel {
@@ -30,19 +29,16 @@ export interface CreatorChannel {
 
 export interface CreatorInfo {
   channels?: CreatorChannel[];
-  contentNiche?: string;
   niche?: string;
   featuredMediaUrl?: string;
   featuredMediaType?: 'video' | 'image';
   featuredTitle?: string;
-  featuredVideoTitle?: string;
   totalViews?: string;
   subscriberCount?: number | string;
   youtubeHandle?: string;
   tiktokHandle?: string;
   podcastName?: string;
   instagramHandle?: string;
-  equipmentGear?: string[];
   equipmentList?: string[];
 }
 
@@ -131,26 +127,21 @@ export interface TruckerReactions {
 export interface Post {
   id: string;
   author: Profile;
-  groupId?: string; // If posted to a specific group/chapter
+  groupId?: string; 
   postType: PostType;
   caption: string;
-  content?: string; // Legacy alias for caption
   tags: string[];
   locationName?: string;
   mediaUrl?: string;
   mediaType?: 'image' | 'video';
   likeCount: number;
-  likesCount?: number; // Legacy alias
   commentCount: number;
-  commentsCount?: number; // Legacy alias
-  likesUsers: string[]; // List of user IDs who liked
+  likesUsers: string[]; 
   createdAt: string;
-  lastUpdated?: string; // Legacy alias
   poll?: PostPoll;
   audioNote?: PostAudioNote;
   reactions?: TruckerReactions;
   isBookmarked?: boolean;
-  isLiked?: boolean; // Legacy alias
 }
 
 export interface PostComment {
@@ -158,8 +149,6 @@ export interface PostComment {
   postId: string;
   author: Profile;
   body: string;
-  content?: string; // Legacy alias
-  text?: string; // Legacy alias
   createdAt: string;
 }
 

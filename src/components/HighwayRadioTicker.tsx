@@ -114,9 +114,16 @@ export default function HighwayRadioTicker({ onNavigateSection }: HighwayRadioTi
   const [isPaused, setIsPaused] = useState(false);
   const [isPlayingAudio, setIsPlayingAudio] = useState(false);
   const [soundEffectToast, setSoundEffectToast] = useState<string | null>(null);
+  const toastTimeoutRef = React.useRef<NodeJS.Timeout | null>(null);
 
   // Filter alerts by selected channel or show all
   const activeAlerts = HIGHWAY_ALERTS;
+
+  useEffect(() => {
+    return () => {
+      if (toastTimeoutRef.current) clearTimeout(toastTimeoutRef.current);
+    };
+  }, []);
 
   useEffect(() => {
     if (isPaused || isPlayingAudio) return;
@@ -168,14 +175,16 @@ export default function HighwayRadioTicker({ onNavigateSection }: HighwayRadioTi
     e.stopPropagation();
     playAirHorn();
     setSoundEffectToast('🎺 Air Horn Blasted!');
-    setTimeout(() => setSoundEffectToast(null), 2000);
+    if (toastTimeoutRef.current) clearTimeout(toastTimeoutRef.current);
+    toastTimeoutRef.current = setTimeout(() => setSoundEffectToast(null), 2000);
   };
 
   const handleTriggerJake = (e: React.MouseEvent) => {
     e.stopPropagation();
     playJakeBrake();
     setSoundEffectToast('💨 Jake Brake Engaged!');
-    setTimeout(() => setSoundEffectToast(null), 2000);
+    if (toastTimeoutRef.current) clearTimeout(toastTimeoutRef.current);
+    toastTimeoutRef.current = setTimeout(() => setSoundEffectToast(null), 2000);
   };
 
   return (

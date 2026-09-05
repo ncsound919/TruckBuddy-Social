@@ -1,9 +1,10 @@
 import React, { useState, useEffect } from 'react';
 import { Moon, WifiOff } from 'lucide-react';
-import { AppNotification, Profile } from './types';
-import { currentUserProfile, sampleNotifications } from './data';
+import { Profile } from './types';
+import { currentUserProfile } from './data';
 import { useOnlineStatus } from './hooks/useOnlineStatus';
 import { usePWAInstall } from './hooks/usePWAInstall';
+import { useNotifications } from './hooks/useNotifications';
 import { useFirebase } from './contexts/FirebaseContext';
 import { auth } from './lib/firebase';
 
@@ -22,8 +23,18 @@ import UserProfileModal from './features/profile/UserProfileModal';
 export default function App() {
   const { user, profile: firebaseProfile, loading: authLoading } = useFirebase();
   const [activeSection, setActiveSection] = useState<'feed' | 'map' | 'leaderboard' | 'network' | 'messages' | 'reports' | 'market' | 'groups' | 'profile' | 'tools' | 'dev'>('feed');
-  const [notifications, setNotifications] = useState<AppNotification[]>([]);
-  const [isNotifOpen, setIsNotifOpen] = useState(false);
+  
+  const userProfile = firebaseProfile || currentUserProfile;
+  const { 
+    notifications, 
+    isNotifOpen, 
+    setIsNotifOpen, 
+    unreadCount, 
+    addNotification, 
+    markAllRead, 
+    clearNotifs 
+  } = useNotifications(userProfile.id);
+
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const [isCommandPaletteOpen, setIsCommandPaletteOpen] = useState(false);
   const [isNightCabMode, setIsNightCabMode] = useState<boolean>(() => {
@@ -39,33 +50,13 @@ export default function App() {
   const [selectedProfile, setSelectedProfile] = useState<Profile | null>(null);
   const [messengerRecipient, setMessengerRecipient] = useState<Profile | null>(null);
   
-  const userProfile = firebaseProfile || currentUserProfile;
   const isOnboarded = !!user;
   
-  // Auth Form
-  
-  
-  
-  
-  
-
   // CDL Onboarding inputs
   
-  
-  
-  
-  
-  
-
-  // Load user session & notifications on mount
+  // Load user session on mount
   useEffect(() => {
-    const cachedNotifs = localStorage.getItem('trucker_notifications');
-    if (cachedNotifs) {
-      setNotifications(JSON.parse(cachedNotifs));
-    } else {
-      setNotifications(sampleNotifications);
-      localStorage.setItem('trucker_notifications', JSON.stringify(sampleNotifications));
-    }
+    // Session setup logic if needed
   }, []);
 
   // Global Keyboard Shortcuts (Cmd+K / Ctrl+K for Trucker Command Bar)
@@ -88,8 +79,6 @@ export default function App() {
     });
   };
 
-  
-
   const handleFlushData = () => {
     localStorage.clear();
     window.location.reload();
@@ -98,61 +87,6 @@ export default function App() {
   const handleSignOut = async () => {
     await auth.signOut();
   };
-
-  const saveNotifications = (updatedOrUpdater: AppNotification[] | ((prev: AppNotification[]) => AppNotification[])) => {
-    setNotifications(prev => {
-      const updated = typeof updatedOrUpdater === 'function' ? updatedOrUpdater(prev) : updatedOrUpdater;
-      localStorage.setItem('trucker_notifications', JSON.stringify(updated));
-      return updated;
-    });
-  };
-
-  const handleAddNotification = (message: string, type: 'like' | 'comment') => {
-    const newNotif: AppNotification = {
-      id: `notif-${Date.now()}`,
-      recipientId: userProfile.id,
-      actor: {
-        id: 'external-driver',
-        username: 'GearJammer_77',
-        displayName: 'Marcus "GearJammer" Cruz',
-        avatarUrl: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?auto=format&fit=crop&q=80&w=200',
-        bio: 'Produce hauler',
-        role: 'driver',
-        cdlClass: 'A',
-        yearsExperience: 6,
-        currentRig: 'Cascadia',
-        homeBase: 'Fresno, CA',
-        lanes: [],
-        carrierName: 'Prime Fresh',
-        isVerified: false,
-        followerCount: 0,
-        followingCount: 0,
-        postCount: 0
-      },
-      type: type === 'like' ? 'like' : 'comment',
-      read: false,
-      message: message,
-      createdAt: new Date().toISOString()
-    };
-
-    saveNotifications(prev => [newNotif, ...prev]);
-  };
-
-  
-  
-
-
-  const handleMarkAllRead = () => {
-    const updated = notifications.map(n => ({ ...n, read: true }));
-    saveNotifications(updated);
-  };
-
-  const handleClearNotifs = () => {
-    saveNotifications([]);
-    setIsNotifOpen(false);
-  };
-
-  const unreadCount = notifications.filter(n => !n.read).length;
 
   return (
     <div className={`min-h-screen font-sans flex flex-col antialiased selection:bg-amber-500 selection:text-slate-950 transition-colors duration-300 ${
@@ -182,9 +116,8 @@ export default function App() {
         </div>
       )}
 
-            {/* AUTH & ONBOARDING OVERLAY */}
+      {/* AUTH & ONBOARDING OVERLAY */}
       {!isOnboarded && !authLoading && <AuthOverlay />}
-      
       
       {/* GLOBAL HIGHWAY NAVIGATION HEADER */}
       <GlobalNavigationHeader 
@@ -193,15 +126,14 @@ export default function App() {
         setIsNotifOpen={setIsNotifOpen}
         unreadCount={unreadCount}
         notifications={notifications}
-        handleMarkAllRead={handleMarkAllRead}
-        handleClearNotifs={handleClearNotifs}
+        handleMarkAllRead={markAllRead}
+        handleClearNotifs={clearNotifs}
         isIOS={isIOS}
         isInstalled={isInstalled}
         isInstallable={isInstallable}
         setShowIOSGuide={setShowIOSGuide}
         install={install}
       />
-
 
       {/* DASHBOARD SHELL CONTAINER */}
       <main className="flex-1 w-full max-w-7xl mx-auto px-4 py-6 grid grid-cols-1 lg:grid-cols-12 gap-6" id="dashboard-layout">
@@ -217,12 +149,11 @@ export default function App() {
           handleSignOut={handleSignOut}
         />
 
-
-                {/* PRIMARY ACTIVE SECTION COLUMN */}
+        {/* PRIMARY ACTIVE SECTION COLUMN */}
         <AppRouter 
           activeSection={activeSection}
           setActiveSection={setActiveSection}
-          handleAddNotification={handleAddNotification}
+          handleAddNotification={addNotification}
           isDeadZone={isDeadZone}
           setSelectedProfile={setSelectedProfile}
           setMessengerRecipient={setMessengerRecipient}
@@ -259,7 +190,7 @@ export default function App() {
         />
       )}
 
-            {/* MOBILE FULL NAVIGATION DRAWER & COCKPIT ACTION SHEET */}
+      {/* MOBILE FULL NAVIGATION DRAWER & COCKPIT ACTION SHEET */}
       <MobileNavigationDrawer 
         isMobileMenuOpen={isMobileMenuOpen}
         setIsMobileMenuOpen={setIsMobileMenuOpen}
@@ -275,7 +206,7 @@ export default function App() {
         handleSignOut={handleSignOut}
       />
 
-{/* MOBILE-FIRST FLOATING COCKPIT DOCK */}
+      {/* MOBILE-FIRST FLOATING COCKPIT DOCK */}
       <MobileFloatingDock 
         activeSection={activeSection}
         setActiveSection={setActiveSection}
@@ -283,8 +214,6 @@ export default function App() {
         setIsMobileMenuOpen={setIsMobileMenuOpen}
         isMobileMenuOpen={isMobileMenuOpen}
       />
-
-
     </div>
   );
 }

@@ -34,6 +34,8 @@ import {
   Locate
 } from 'lucide-react';
 
+import { useToast } from '../../hooks/useToast';
+
 interface WeighStationPreset {
   id: string;
   name: string;
@@ -109,9 +111,12 @@ export default function RoadReportsSection({ onViewProfile }: RoadReportsSection
   const [selectedCorridor, setSelectedCorridor] = useState<string>('all');
   const [activeSubTab, setActiveSubTab] = useState<'alerts' | 'weigh_stations'>('alerts');
   
+  const { toastMsg, showToast } = useToast();
+
   // CB Radio broadcast state
   const [isRadioPlaying, setIsRadioPlaying] = useState(false);
   const [radioStatusText, setRadioStatusText] = useState('Channel 19 Squelch Standby • 27.185 MHz');
+  const audioCleanupRef = React.useRef<(() => void) | null>(null);
 
   // Create report modal state
   const [isFormOpen, setIsFormOpen] = useState(false);
@@ -143,6 +148,7 @@ export default function RoadReportsSection({ onViewProfile }: RoadReportsSection
 
     return () => {
       if (unsubscribe) unsubscribe();
+      if (audioCleanupRef.current) audioCleanupRef.current();
     };
   }, []);
 
@@ -150,9 +156,12 @@ export default function RoadReportsSection({ onViewProfile }: RoadReportsSection
     setReports(updated);
   };
 
-  const saveWeighStations = (updated: WeighStationPreset[]) => {
-    setWeighStations(updated);
-    localStorage.setItem('trucker_weigh_stations', JSON.stringify(updated));
+  const saveWeighStations = (updatedOrUpdater: WeighStationPreset[] | ((prev: WeighStationPreset[]) => WeighStationPreset[])) => {
+    setWeighStations(prev => {
+      const updated = typeof updatedOrUpdater === 'function' ? updatedOrUpdater(prev) : updatedOrUpdater;
+      localStorage.setItem('trucker_weigh_stations', JSON.stringify(updated));
+      return updated;
+    });
   };
 
   // Upvote / Confirm report with live Firestore sync
@@ -161,7 +170,8 @@ export default function RoadReportsSection({ onViewProfile }: RoadReportsSection
     if (!report) return;
 
     const hasUpvoted = (report.upvotedUsers || []).includes(currentUserProfile.id);
-    const updated = reports.map(r => {
+    
+    setReports(prev => prev.map(r => {
       if (r.id === id) {
         let upvotedUsers = [...(r.upvotedUsers || [])];
         let upvoteCount = r.upvoteCount || r.upvotes || 0;
@@ -179,11 +189,10 @@ export default function RoadReportsSection({ onViewProfile }: RoadReportsSection
         return { ...r, upvoteCount, upvotes: upvoteCount, upvotedUsers, verifiedByDriversCount: verifiedCount };
       }
       return r;
-    });
-    setReports(updated);
+    }));
 
     try {
-      await voteLiveSafetyReport(id, !hasUpvoted);
+      await voteLiveSafetyReport(id, currentUserProfile.id, hasUpvoted);
     } catch (e) {
       console.warn('Live safety report vote sync notice:', e);
     }
@@ -191,7 +200,7 @@ export default function RoadReportsSection({ onViewProfile }: RoadReportsSection
 
   // Update Weigh Station Status in 1-click
   const handleUpdateWeighStationStatus = (scaleId: string, newStatus: WeighStationPreset['status']) => {
-    const updated = weighStations.map(ws => {
+    saveWeighStations(prev => prev.map(ws => {
       if (ws.id === scaleId) {
         return {
           ...ws,
@@ -201,8 +210,8 @@ export default function RoadReportsSection({ onViewProfile }: RoadReportsSection
         };
       }
       return ws;
-    });
-    saveWeighStations(updated);
+    }));
+    showToast('Scale status updated and shared!');
   };
 
   // Trigger CB Radio Voice Alert Broadcast
@@ -222,7 +231,7 @@ export default function RoadReportsSection({ onViewProfile }: RoadReportsSection
       `Attention drivers on ${r.locationName}. ${r.title}. ${r.description}`
     ).join('. Next bulletin: ');
 
-    broadcastCbMessage(
+    audioCleanupRef.current = broadcastCbMessage(
       `Breaker one-nine. ${speechText}`,
       () => setIsRadioPlaying(true),
       () => {

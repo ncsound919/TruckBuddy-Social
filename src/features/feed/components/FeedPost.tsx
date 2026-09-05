@@ -37,7 +37,7 @@ export function FeedPost({
 
   if (!currentUserProfile) return null;
 
-  const hasLiked = (post.likesUsers || []).includes(currentUserProfile.id) || post.isLiked;
+  const hasLiked = (post.likesUsers || []).includes(currentUserProfile.id);
   const userReaction = post.reactions?.userReactions?.[currentUserProfile.id];
   const reactions = post.reactions || { affirmative: 0, hammerDown: 0, airHorn: 0, scaleAlert: 0, safeTravels: 0 };
   const showComments = openCommentsPostId === post.id;
@@ -73,7 +73,7 @@ export function FeedPost({
             <div className="flex items-center space-x-2 text-xs text-zinc-500 font-medium">
               <span>@{post.author.username}</span>
               <span>•</span>
-              <span>{post.lastUpdated || post.createdAt}</span>
+              <span>{post.createdAt}</span>
             </div>
           </div>
         </div>
@@ -81,7 +81,7 @@ export function FeedPost({
 
       {/* Content */}
       <div className="p-4 sm:p-5">
-        <p className="text-slate-800 text-[15px] leading-relaxed whitespace-pre-wrap font-medium">{post.caption || post.content}</p>
+        <p className="text-slate-800 text-[15px] leading-relaxed whitespace-pre-wrap font-medium">{post.caption}</p>
         
         {post.mediaUrl && (
           <div className="mt-4 rounded-xl overflow-hidden bg-zinc-100 relative cursor-pointer" onClick={() => onViewMedia({ url: post.mediaUrl, caption: post.caption, author: post.author, type: 'image' })}>
@@ -111,11 +111,11 @@ export function FeedPost({
         <div className="flex items-center space-x-1">
           <button onClick={() => onLike(post.id)} className={`flex items-center space-x-1.5 px-3 py-1.5 rounded-lg transition-colors ${hasLiked ? 'text-red-500 bg-red-50' : 'text-zinc-500 hover:bg-zinc-200'}`}>
             <Heart className={`w-4 h-4 ${hasLiked ? 'fill-current' : ''}`} />
-            <span className="text-xs font-bold">{post.likeCount || post.likesCount || 0}</span>
+            <span className="text-xs font-bold">{post.likeCount || 0}</span>
           </button>
           <button onClick={() => setOpenCommentsPostId(showComments ? null : post.id)} className="flex items-center space-x-1.5 px-3 py-1.5 rounded-lg text-zinc-500 hover:bg-zinc-200 transition-colors">
             <MessageSquare className="w-4 h-4" />
-            <span className="text-xs font-bold">{post.commentCount || post.commentsCount || comments.length || 0}</span>
+            <span className="text-xs font-bold">{post.commentCount || 0}</span>
           </button>
         </div>
         <button onClick={() => onBookmark(post.id)} className={`p-1.5 rounded-lg transition-colors ${post.isBookmarked ? 'text-blue-600 bg-blue-50' : 'text-zinc-400 hover:bg-zinc-200 hover:text-zinc-600'}`}>
@@ -135,7 +135,7 @@ export function FeedPost({
                     <span className="font-bold text-xs">{c.author.displayName}</span>
                     <span className="text-[10px] text-zinc-400">{c.createdAt}</span>
                   </div>
-                  <p className="text-xs text-slate-700 mt-1">{c.content || c.text}</p>
+                  <p className="text-xs text-slate-700 mt-1">{c.body}</p>
                 </div>
               </div>
             ))}

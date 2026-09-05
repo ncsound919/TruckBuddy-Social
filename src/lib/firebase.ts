@@ -123,17 +123,14 @@ export async function createLivePost(postData: Partial<Post>) {
   const payload = {
     id: newId,
     author: postData.author || currentUserProfile,
-    caption: postData.caption || postData.content || '',
+    caption: postData.caption || '',
     locationName: postData.locationName || 'Highway Dispatch',
     postType: postData.postType || 'text',
     tags: postData.tags || ['Dispatch'],
-    likes: 0,
-    likesCount: 0,
-    isLiked: false,
-    commentsCount: 0,
-    shares: 0,
-    createdAt: Timestamp.now(),
-    serverCreatedAt: serverTimestamp(),
+    likeCount: 0,
+    commentCount: 0,
+    likesUsers: [],
+    createdAt: new Date().toISOString(),
     mediaUrl: postData.mediaUrl || '',
     poll: postData.poll || null
   };
@@ -144,9 +141,8 @@ export async function createLivePost(postData: Partial<Post>) {
 export async function toggleLivePostLike(postId: string, userId: string, currentlyLiked: boolean) {
   const postRef = doc(db, 'posts', postId);
   await updateDoc(postRef, {
-    likes: increment(currentlyLiked ? -1 : 1),
-    likesCount: increment(currentlyLiked ? -1 : 1),
-    upvotedUserIds: currentlyLiked ? arrayRemove(userId) : arrayUnion(userId)
+    likeCount: increment(currentlyLiked ? -1 : 1),
+    likesUsers: currentlyLiked ? arrayRemove(userId) : arrayUnion(userId)
   });
 }
 
@@ -174,14 +170,14 @@ export async function addLiveComment(postId: string, commentData: Partial<PostCo
   
   const payload = {
     author: commentData.author || currentUserProfile,
-    body: commentData.body || commentData.text || commentData.content || '',
-    createdAt: Timestamp.now(),
-    likesCount: 0
+    body: commentData.body || '',
+    createdAt: new Date().toISOString(),
+    postId
   };
 
   const docAdded = await addDoc(commentsColl, payload);
   await updateDoc(postRef, {
-    commentsCount: increment(1)
+    commentCount: increment(1)
   });
   return docAdded.id;
 }
@@ -214,29 +210,28 @@ export async function createLiveSafetyReport(reportData: Partial<RoadReport>) {
   const payload = {
     id: newId,
     author: reportData.author || currentUserProfile,
-    reportType: reportData.reportType || (reportData as any).type || 'hazard',
+    reportType: reportData.reportType || 'hazard',
     title: reportData.title || 'Road Advisory',
     description: reportData.description || '',
     corridor: reportData.corridor || 'I-80',
     locationName: reportData.locationName || 'Mile Marker',
     lat: reportData.lat || 41.5,
     lng: reportData.lng || -106.5,
-    upvotes: 1,
-    downvotes: 0,
-    status: 'active',
+    upvoteCount: 1,
+    upvotedUsers: [reportData.author?.id || currentUserProfile.id],
     severity: reportData.severity || 'moderate',
-    createdAt: Timestamp.now(),
-    serverCreatedAt: serverTimestamp()
+    createdAt: new Date().toISOString(),
+    expiresAt: new Date(Date.now() + 1000 * 60 * 60 * 4).toISOString() // 4 hours
   };
   await setDoc(repRef, payload);
   return newId;
 }
 
-export async function voteLiveSafetyReport(reportId: string, isUpvote: boolean) {
+export async function voteLiveSafetyReport(reportId: string, userId: string, currentlyUpvoted: boolean) {
   const repRef = doc(db, 'safetyReports', reportId);
   await updateDoc(repRef, {
-    upvotes: isUpvote ? increment(1) : increment(0),
-    downvotes: !isUpvote ? increment(1) : increment(0)
+    upvoteCount: increment(currentlyUpvoted ? -1 : 1),
+    upvotedUsers: currentlyUpvoted ? arrayRemove(userId) : arrayUnion(userId)
   });
 }
 

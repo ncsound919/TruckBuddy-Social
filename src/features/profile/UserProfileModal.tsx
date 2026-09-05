@@ -439,12 +439,12 @@ export default function UserProfileModal({ profile, onClose, onOpenDirectMessage
               <div className="space-y-3">
                 <div className="flex items-center justify-between">
                   <h4 className="text-xs font-black uppercase tracking-wider text-slate-700">
-                    Active Courses & Training Modules ({profile.instructorInfo?.courseOfferings?.length || 0})
+                    Active Courses & Training Modules ({profile.instructorInfo?.courses?.length || 0})
                   </h4>
                 </div>
 
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                  {(profile.instructorInfo?.courseOfferings || [
+                  {(profile.instructorInfo?.courses || [
                     {
                       id: 'crs-1',
                       title: 'Mastering the 90-Degree Blind-Side Alley Dock',
@@ -588,7 +588,7 @@ export default function UserProfileModal({ profile, onClose, onOpenDirectMessage
                       Featured Rig Walkaround
                     </span>
                     <h5 className="text-base font-black text-white mt-1">
-                      {profile.creatorInfo?.featuredVideoTitle || 'Full Tour: Custom 2024 Sleeper Cab with Triple Solar Array & Off-Grid Studio'}
+                      {profile.creatorInfo?.featuredTitle || 'Full Tour: Custom 2024 Sleeper Cab with Triple Solar Array & Off-Grid Studio'}
                     </h5>
                     <p className="text-xs text-zinc-300">
                       Filmed live across I-80 Wyoming snowstorm.

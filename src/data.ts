@@ -194,12 +194,12 @@ export const sampleProfiles: Profile[] = [
         { platform: 'podcast', handleOrUrl: 'The Diesel Frequency Podcast', followersCount: '48K weekly listeners' },
         { platform: 'instagram', handleOrUrl: '@brenda_peterbilt389', followersCount: '95K followers' }
       ],
-      contentNiche: 'Rig Tours, Honest Truck Stop Reviews, & Life on the Interstate',
+      niche: 'Rig Tours, Honest Truck Stop Reviews, & Life on the Interstate',
       featuredMediaUrl: 'https://images.unsplash.com/photo-1601584115197-04ecc0da31d7?auto=format&fit=crop&q=80&w=800',
       featuredMediaType: 'video',
       featuredTitle: 'Wyoming Winter Storm Survial & Cab Comfort Tour | Peterbilt 389',
       totalViews: '4.8M views',
-      equipmentGear: ['GoPro Hero 12 Windshield Mount', 'DJI Mic 2 Dual Wireless', 'Garmin dēzl OTR710 Dashcam', 'Sony A7IV B-Roll Cam']
+      equipmentList: ['GoPro Hero 12 Windshield Mount', 'DJI Mic 2 Dual Wireless', 'Garmin dēzl OTR710 Dashcam', 'Sony A7IV B-Roll Cam']
     }
   }
 ];

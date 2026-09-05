@@ -5,8 +5,9 @@ import { subscribeLivePosts, createLivePost, toggleLivePostLike, subscribeLiveCo
 import DriverStoriesBar from './DriverStoriesBar';
 import { FeedPost } from './components/FeedPost';
 import { FeedComposer } from './components/FeedComposer';
-import { Clock, PlusCircle, Bookmark, Tag } from 'lucide-react';
+import { Clock, PlusCircle, Bookmark, Tag, Sparkles } from 'lucide-react';
 import { useFirebase } from '../../contexts/FirebaseContext';
+import { useToast } from '../../hooks/useToast';
 
 interface FeedSectionProps {
   onNotificationAdd: (message: string, type: 'like' | 'comment') => void;
@@ -24,19 +25,12 @@ export default function FeedSection({ onNotificationAdd, isDeadZone = false, onV
   const [comments, setComments] = useState<Record<string, PostComment[]>>({});
   const [activeTab, setActiveTab] = useState<'for_you' | 'following' | 'saved'>('for_you');
   const [selectedTag, setSelectedTag] = useState<string>('all');
-  const [toastMsg, setToastMsg] = useState<string | null>(null);
+  const { toastMsg, showToast } = useToast();
   
   const [lightboxMedia, setLightboxMedia] = useState<{ url: string; caption?: string; author?: Profile; type?: 'image' | 'video' } | null>(null);
   const [repostModalPost, setRepostModalPost] = useState<Post | null>(null);
   const [isComposerOpen, setIsComposerOpen] = useState(false);
   const [openCommentsPostId, setOpenCommentsPostId] = useState<string | null>(null);
-
-  useEffect(() => {
-    if (toastMsg) {
-      const timer = setTimeout(() => setToastMsg(null), 4000);
-      return () => clearTimeout(timer);
-    }
-  }, [toastMsg]);
 
   useEffect(() => {
     const unsubscribe = subscribeLivePosts((livePosts) => {
@@ -86,20 +80,20 @@ export default function FeedSection({ onNotificationAdd, isDeadZone = false, onV
   const handleCreatePost = async (postData: any, author: Profile) => {
     try {
       await createLivePost({ author, ...postData });
-      setToastMsg('📡 Post published live to Firestore Road Feed for all drivers!');
+      showToast('📡 Post published live to Road Feed!');
     } catch (e) {
       console.warn('Live post create note:', e);
-      setToastMsg('Failed to publish post to Road Feed.');
+      showToast('Failed to publish post to Road Feed.');
     }
     setIsComposerOpen(false);
   };
 
-  const handleAddComment = async (postId: string, text: string) => {
+  const handleAddComment = async (postId: string, body: string) => {
     try {
-      await addLiveComment(postId, { author: currentUserProfile, text });
+      await addLiveComment(postId, { author: currentUserProfile, body });
       setPosts(posts.map(post => {
         if (post.id === postId) {
-          return { ...post, commentCount: (post.commentCount || post.commentsCount || 0) + 1, commentsCount: (post.commentsCount || post.commentCount || 0) + 1 };
+          return { ...post, commentCount: (post.commentCount || 0) + 1 };
         }
         return post;
       }));
@@ -120,10 +114,11 @@ export default function FeedSection({ onNotificationAdd, isDeadZone = false, onV
 
   return (
     <div className="space-y-6" id="feed-container">
+      {/* Toast Overlay */}
       {toastMsg && (
-        <div className="bg-amber-500 text-slate-950 px-4 py-3 rounded-xl font-bold text-xs shadow-md flex items-center justify-between">
-          <span>{toastMsg}</span>
-          <button onClick={() => setToastMsg(null)} className="font-extrabold uppercase ml-2 text-[10px] hover:opacity-80">✕</button>
+        <div className="fixed top-24 left-1/2 -translate-x-1/2 z-50 bg-slate-900 text-white px-6 py-3 rounded-2xl shadow-2xl border border-slate-700 flex items-center space-x-3 animate-in fade-in slide-in-from-top-4 duration-300">
+          <Sparkles className="w-5 h-5 text-amber-400 fill-amber-400" />
+          <span className="text-sm font-black tracking-tight">{toastMsg}</span>
         </div>
       )}
 
