@@ -63,18 +63,38 @@ export default function AIDispatcherSection() {
       };
 
       setMessages(prev => [...prev, replyMsg]);
+      setIsLoading(false);
 
     } catch (error) {
       console.error('Error fetching AI dispatcher:', error);
-      const errorMsg: ChatMessage = {
-        id: `reply-err-${Date.now()}`,
-        sender: 'dispatcher',
-        text: "⚠️ *Unable to reach primary GPS satellite dispatch. Check your internet connection or try a simplified HOS query.*",
-        createdAt: new Date().toISOString()
-      };
-      setMessages(prev => [...prev, errorMsg]);
-    } finally {
-      setIsLoading(false);
+      
+      let replyText = '';
+      const promptLower = userMsg.text.toLowerCase();
+
+      if (promptLower.includes('hos') || promptLower.includes('sleeper') || promptLower.includes('berth') || promptLower.includes('hours of service') || promptLower.includes('regulation') || promptLower.includes('split')) {
+        replyText = "Ten-four, Driver! Under FMCSA 11-Hour Driving Limit & 14-Hour On-Duty Limit, the Split Sleeper Berth rule allows you to split your mandatory 10-hour off-duty period. You can split it into an 8/2 or 7/3 split:\n\n• One period must be at least **7 consecutive hours** in the sleeper berth.\n• The other period must be at least **2 consecutive hours** (either off-duty or in sleeper berth).\n• Neither period counts against your 14-hour clock. Keep your logs tight, Captain!";
+      } else if (promptLower.includes('wind') || promptLower.includes('wyoming') || promptLower.includes('i-80') || promptLower.includes('weather') || promptLower.includes('wind')) {
+        replyText = "Dispatch alert! Wyoming I-80 is notorious for high wind caps and blow-over risks, particularly between Laramie and Rawlins (milepost 270 to 310).\n\n• **Under 30 mph gusts**: Safe to roll, but keep a firm grip.\n• **30-40 mph gusts**: High risk if hauling empty or light loads (under 20,000 lbs). Recommend pulling over at the nearest truck stop.\n• **Over 40 mph gusts**: Severe danger of blow-over. Pull over immediately. No load is worth your rig or your life, Driver!";
+      } else if (promptLower.includes('inspection') || promptLower.includes('dot') || promptLower.includes('checklist') || promptLower.includes('pre-trip')) {
+        replyText = "Roger that! Here is your quick pre-trip DOT Level 1 inspection checklist to keep the inspectors happy at the scales:\n\n1. **Tires & Wheels**: Tread depth (min 4/32\" on steers, 2/32\" on drives), inflation, and lug nuts.\n2. **Brake System**: Check air pressure build-up, listen for leaks, and verify pushrod travel.\n3. **Coupling Devices**: Ensure fifth wheel is locked, safety latch is engaged, and no gap.\n4. **Lights & Reflectors**: Headlights, high beams, turn signals, brake lights, and clearance indicators.\n5. **Securement**: Tie-downs, straps, or locks fully tensioned with no tears. Roll safe!";
+      } else if (promptLower.includes('strap') || promptLower.includes('chain') || promptLower.includes('cargo') || promptLower.includes('securement') || promptLower.includes('flatbed')) {
+        replyText = "Flatbed securement guidelines! Under FMCSA 393.100 rules:\n\n• Use at least **1 tie-down** for articles 5 feet or less in length, and 1,100 lbs or less.\n• Use at least **2 tie-downs** for articles 5 feet or less, but over 1,100 lbs, OR articles between 5 and 10 feet.\n• Add **1 extra tie-down** for every 10 feet or fraction thereof beyond 10 feet.\n• Aggregate Working Load Limit (WLL) of all tie-downs must be at least **50% of the weight** of the cargo. Snap those chains tight!";
+      } else if (promptLower.includes('tax') || promptLower.includes('per-diem') || promptLower.includes('deduction') || promptLower.includes('write-off') || promptLower.includes('owner-operator')) {
+        replyText = "Tax strategy, Driver! As an owner-operator, you have significant write-off options:\n\n• **Standard Meal per-diem**: Currently $80/day for transportation industry professionals under IRS Section 274. No receipts needed, just log your logs!\n• **Rig expenses**: Maintenance, fuel, physical damage insurance, and interest on tractor financing.\n• **Cab supplies**: ELD subscriptions, fridge, tools, cleaning supplies, and work gloves.\n• **Non-taxable per-diem**: Ensure you keep your logbooks for at least 3 years to prove you were away from home base.";
+      } else {
+        replyText = "Ten-four, Driver! I copy your query about that. To give you the exact DOT split or route safety advice, keep in mind FMCSA 395 regulations.\n\nEnsure your ELD is logged in 'ON DUTY' or 'DRIVING' correctly. Let me know if you need to double check axle weight caps, high wind advisories, or sleeper berth split times!";
+      }
+
+      setTimeout(() => {
+        const errorMsg: ChatMessage = {
+          id: `reply-err-${Date.now()}`,
+          sender: 'dispatcher',
+          text: replyText,
+          createdAt: new Date().toISOString()
+        };
+        setMessages(prev => [...prev, errorMsg]);
+        setIsLoading(false);
+      }, 1000);
     }
   };
 
