@@ -19,6 +19,8 @@ export interface InstructorInfo {
   acceptingStudents?: boolean;
   hourlyRate?: string | number;
   courses?: InstructorCourse[];
+  /** Alias used by the profile editor; mirrors `courses`. */
+  courseOfferings?: InstructorCourse[];
 }
 
 export interface CreatorChannel {
@@ -33,6 +35,8 @@ export interface CreatorInfo {
   featuredMediaUrl?: string;
   featuredMediaType?: 'video' | 'image';
   featuredTitle?: string;
+  /** Alias used by the profile editor; mirrors `featuredTitle`. */
+  featuredVideoTitle?: string;
   totalViews?: string;
   subscriberCount?: number | string;
   youtubeHandle?: string;
@@ -142,6 +146,9 @@ export interface Post {
   audioNote?: PostAudioNote;
   reactions?: TruckerReactions;
   isBookmarked?: boolean;
+  /** Legacy aliases some UI paths still read; prefer likeCount/likesUsers. */
+  isLiked?: boolean;
+  likesCount?: number;
 }
 
 export interface PostComment {
@@ -181,6 +188,8 @@ export interface RoadReport {
   severity?: 'low' | 'moderate' | 'high' | 'critical';
   upvoteCount: number;
   upvotedUsers: string[];
+  /** Legacy alias some UI paths still read; prefer upvoteCount. */
+  upvotes?: number;
   expiresAt: string;
   createdAt: string;
   statusValue?: string; // e.g. "Scale Open", "DOT Inspection Active", "15 spots open"
@@ -188,7 +197,7 @@ export interface RoadReport {
   verifiedByDriversCount?: number;
 }
 
-export type ListingCategory = 'parts' | 'equipment' | 'cab_electronics' | 'tires' | 'truck' | 'trailer' | 'merchandise' | 'service';
+export type ListingCategory = 'parts' | 'equipment' | 'electronics' | 'tires' | 'truck' | 'trailer' | 'merchandise' | 'service';
 
 export interface Listing {
   id: string;
@@ -207,7 +216,7 @@ export interface Listing {
   warrantyIncluded?: boolean;
   isNegotiable?: boolean;
   acceptsTrades?: boolean;
-  contactMethod?: 'cb_chat' | 'phone' | 'offer';
+  contactMethod?: 'in_app' | 'cb_radio' | 'phone';
 }
 
 export type NotificationType = 'like' | 'comment' | 'follow' | 'group_invite' | 'system' | 'report_resolved';
@@ -466,7 +475,7 @@ export interface GroupDiscussion {
   author: Profile;
   title: string;
   content: string;
-  category: 'safety_regulations' | 'rig_builds' | 'rates_dispatch' | 'road_meetups' | 'general';
+  category: 'safety_regulations' | 'rig_builds' | 'rates_contracts' | 'road_meetups' | 'general';
   createdAt: string;
   upvotes: number;
   upvotedUsers: string[];

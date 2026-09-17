@@ -12,6 +12,7 @@ import type {
   RoadReport,
   UserRole,
 } from '../types';
+import { publicMediaUrl } from './supabase';
 
 /**
  * Row <-> domain mappers between the normalised Supabase schema and the rich
@@ -118,7 +119,9 @@ export function rowToPost(row: Row): Post {
     caption: row.caption ?? row.content ?? '',
     tags: row.tags ?? [],
     locationName: row.location_name ?? undefined,
-    mediaUrl: firstMedia?.storage_path ?? meta.mediaUrl ?? undefined,
+    mediaUrl: firstMedia
+      ? publicMediaUrl(firstMedia.storage_path, 'post-media')
+      : (meta.mediaUrl ?? undefined),
     mediaType: firstMedia?.media_type ?? meta.mediaType,
     likeCount: row.like_count ?? 0,
     commentCount: row.comment_count ?? 0,
@@ -284,7 +287,9 @@ export function rowToListing(row: Row): Listing {
     category: (row.category ?? 'parts') as Listing['category'],
     condition: (row.condition ?? 'used') as Listing['condition'],
     location: row.location ?? '',
-    mediaUrl: firstMedia?.storage_path ?? meta.mediaUrl ?? '',
+    mediaUrl: firstMedia
+      ? (publicMediaUrl(firstMedia.storage_path, 'listing-media') ?? '')
+      : (meta.mediaUrl ?? ''),
     createdAt: row.created_at ?? new Date().toISOString(),
     corridor: meta.corridor,
     dotInspected: meta.dotInspected,

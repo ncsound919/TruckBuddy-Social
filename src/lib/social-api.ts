@@ -169,7 +169,7 @@ export function subscribeLiveComments(
     `live-comments-${postId}`,
     [
       { key: 'comments', filter: `post_id=eq.${postId}` },
-      { key: 'profiles', filter: 'id=neq.00000000-0000-0000-0000-000000000000' },
+      'profiles',
     ],
     async () => {
       const { data, error } = await supabase

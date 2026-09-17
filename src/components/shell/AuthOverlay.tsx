@@ -53,7 +53,12 @@ export function AuthOverlay() {
             if (error) throw error;
 
             const uid = data.user?.id;
-            if (uid) {
+            if (!data.session) {
+              // Email confirmation pending — there is no session yet, so a
+              // profile write would be rejected by RLS. The trigger has
+              // already provisioned the row; stay signed out.
+              setAuthError('Account created. Check your email to confirm, then sign in.');
+            } else if (uid) {
               // The on_auth_user_created trigger already provisioned the row
               // (and minted a unique username); this fills in the CDL details.
               const { error: profileError } = await supabase.from('profiles').upsert(
@@ -74,10 +79,6 @@ export function AuthOverlay() {
                 { onConflict: 'id' },
               );
               if (profileError) throw profileError;
-            }
-
-            if (!data.session) {
-              setAuthError('Account created. Check your email to confirm, then sign in.');
             }
         } else {
             const { error } = await supabase.auth.signInWithPassword({

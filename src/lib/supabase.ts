@@ -32,3 +32,17 @@ export async function currentUserId(): Promise<string | null> {
   const { data } = await supabase.auth.getSession();
   return data.session?.user.id ?? null;
 }
+
+/**
+ * Turns a storage object path into a public URL. Absolute/data/blob URLs are
+ * passed through untouched (the composer may hand us a pasted URL or a local
+ * preview before upload).
+ */
+export function publicMediaUrl(
+  path: string | null | undefined,
+  bucket = 'post-media',
+): string | undefined {
+  if (!path) return undefined;
+  if (/^(https?:|data:|blob:)/i.test(path)) return path;
+  return supabase.storage.from(bucket).getPublicUrl(path).data.publicUrl;
+}
