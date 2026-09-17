@@ -1,10 +1,11 @@
 import React, { useState, useEffect, useMemo, useRef } from 'react';
 import { MemberLocation, Profile, DriverMapStatus } from '../../types';
-import { sampleMemberLocations, currentUserProfile } from '../../data';
+import { sampleMemberLocations } from '../../data';
+import { useCurrentProfile } from '../../contexts/SupabaseContext';
 import { 
   subscribeLiveMemberLocations, 
   updateLiveMemberLocation 
-} from '../../lib/firebase';
+} from '../../lib/social-api';
 import {
   MAP_BOUNDS,
   projectCoords,
@@ -67,6 +68,7 @@ export default function MemberMapSection({
   onOpenDirectMessage,
   isDeadZone = false
 }: MemberMapSectionProps) {
+  const currentUserProfile = useCurrentProfile();
   // Member locations state with live Firestore subscription
   const [locations, setLocations] = useState<MemberLocation[]>(sampleMemberLocations);
 

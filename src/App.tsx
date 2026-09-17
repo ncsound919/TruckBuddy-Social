@@ -5,8 +5,8 @@ import { currentUserProfile } from './data';
 import { useOnlineStatus } from './hooks/useOnlineStatus';
 import { usePWAInstall } from './hooks/usePWAInstall';
 import { useNotifications } from './hooks/useNotifications';
-import { useFirebase } from './contexts/FirebaseContext';
-import { auth } from './lib/firebase';
+import { useSupabaseSession } from './contexts/SupabaseContext';
+import { supabase } from './lib/supabase';
 
 // Shell Components
 import { GlobalNavigationHeader } from './components/shell/GlobalNavigationHeader';
@@ -21,10 +21,10 @@ import CommandPaletteModal from './components/CommandPaletteModal';
 import UserProfileModal from './features/profile/UserProfileModal';
 
 export default function App() {
-  const { user, profile: firebaseProfile, loading: authLoading } = useFirebase();
+  const { user, profile: liveProfile, loading: authLoading } = useSupabaseSession();
   const [activeSection, setActiveSection] = useState<'feed' | 'map' | 'leaderboard' | 'network' | 'messages' | 'reports' | 'market' | 'groups' | 'profile' | 'tools' | 'dev'>('feed');
   
-  const userProfile = firebaseProfile || currentUserProfile;
+  const userProfile = liveProfile || currentUserProfile;
   const { 
     notifications, 
     isNotifOpen, 
@@ -85,7 +85,7 @@ export default function App() {
   };
 
   const handleSignOut = async () => {
-    await auth.signOut();
+    await supabase.auth.signOut();
   };
 
   return (

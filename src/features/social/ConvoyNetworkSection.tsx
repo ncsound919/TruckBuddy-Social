@@ -8,18 +8,18 @@ import {
 } from '../../types';
 import { 
   sampleProfiles, 
-  currentUserProfile, 
   sampleConvoys, 
   sampleCorridorRadars, 
   samplePeerEndorsements 
 } from '../../data';
+import { useCurrentProfile } from '../../contexts/SupabaseContext';
 import { 
   subscribeLiveConvoys, 
   createLiveConvoy, 
   toggleLiveConvoyMembership, 
   subscribeLiveConvoyMessages, 
   sendLiveConvoyMessage 
-} from '../../lib/firebase';
+} from '../../lib/social-api';
 import { 
   Truck, 
   Radio, 
@@ -57,6 +57,7 @@ export default function ConvoyNetworkSection({
   isDeadZone = false 
 }: ConvoyNetworkSectionProps) {
   const { toastMsg, showToast } = useToast();
+  const currentUserProfile = useCurrentProfile();
   
   // Tabs & Filters
   const [activeTab, setActiveTab] = useState<'convoys' | 'radar' | 'endorsements'>('convoys');

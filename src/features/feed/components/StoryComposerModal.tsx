@@ -1,6 +1,6 @@
 import React from 'react';
 import { X, MapPin, Compass, Camera, Check } from 'lucide-react';
-import { useFirebase } from '../../../contexts/FirebaseContext';
+import { useSupabaseSession } from '../../../contexts/SupabaseContext';
 
 export function StoryComposerModal({
   onClose,
@@ -16,7 +16,7 @@ export function StoryComposerModal({
   setNewMediaUrl,
   handleSubmit
 }: any) {
-  const { profile: currentUserProfile } = useFirebase();
+  const { profile: currentUserProfile } = useSupabaseSession();
   const commonEmojis = ['🚛', '☕', '🍔', '⛽', '🛑', '🌧️', '❄️', '🚦', '🔧', '🤠', '🤘', '🚧'];
 
   if (!currentUserProfile) return null;

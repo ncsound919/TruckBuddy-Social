@@ -1,6 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import { Listing, Profile, ListingCategory } from '../../types';
-import { sampleListings, currentUserProfile } from '../../data';
+import { sampleListings } from '../../data';
+import { useCurrentProfile } from '../../contexts/SupabaseContext';
+import { createLiveListing, subscribeLiveListings } from '../../lib/social-api';
 import { 
   Tag, 
   Search, 
@@ -33,6 +35,7 @@ interface MarketplaceSectionProps {
 }
 
 export default function MarketplaceSection({ onViewProfile }: MarketplaceSectionProps = {}) {
+  const currentUserProfile = useCurrentProfile();
   const [listings, setListings] = useState<Listing[]>([]);
   const [searchQuery, setSearchQuery] = useState('');
   const [categoryFilter, setCategoryFilter] = useState<string>('all');
@@ -72,22 +75,15 @@ export default function MarketplaceSection({ onViewProfile }: MarketplaceSection
   const [calcApr, setCalcApr] = useState(8.5);
 
   useEffect(() => {
-    const fetchListings = async () => {
-      try {
-        // Fallback to local storage/mock for now during migration
-        const cached = localStorage.getItem('trucker_listings');
-        if (cached) {
-          setListings(JSON.parse(cached));
-        } else {
-          setListings(sampleListings);
-          localStorage.setItem('trucker_listings', JSON.stringify(sampleListings));
-        }
-      } catch (e) {
-        console.error('Failed to load listings from database, falling back to local storage:', e);
+    const unsubscribe = subscribeLiveListings((live) => {
+      if (live.length > 0) {
+        setListings(live);
+        localStorage.setItem('trucker_listings', JSON.stringify(live));
+      } else {
         setListings(sampleListings);
       }
-    };
-    fetchListings();
+    });
+    return unsubscribe;
   }, []);
 
   const saveListings = async (updated: Listing[]) => {
@@ -122,7 +118,7 @@ export default function MarketplaceSection({ onViewProfile }: MarketplaceSection
     saveListings(updated);
     
     try {
-      throw new Error("Migrate to Firebase!"); // ('listings').insert(newListing);
+      await createLiveListing({ ...newListing, seller: currentUserProfile });
     } catch (e) {
       console.warn('Failed to insert listing to backend database, saved locally:', e);
     }

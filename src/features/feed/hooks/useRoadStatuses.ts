@@ -1,11 +1,11 @@
 import { useState, useEffect } from 'react';
 import { DriverRoadStatus } from '../../../types';
 import { playAirHorn, playHighBeamFlash, playCbSquelch } from '../../../utils/cbAudio';
-import { subscribeLiveRoadStatuses, updateLiveRoadStatusReaction } from '../../../lib/firebase';
-import { useFirebase } from '../../../contexts/FirebaseContext';
+import { subscribeLiveRoadStatuses, updateLiveRoadStatusReaction } from '../../../lib/social-api';
+import { useSupabaseSession } from '../../../contexts/SupabaseContext';
 
 export function useRoadStatuses(showToast: (msg: string) => void) {
-  const { profile: currentUserProfile } = useFirebase();
+  const { profile: currentUserProfile } = useSupabaseSession();
   const [statuses, setStatuses] = useState<DriverRoadStatus[]>([]);
 
   useEffect(() => {

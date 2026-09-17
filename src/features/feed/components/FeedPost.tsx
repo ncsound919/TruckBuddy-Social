@@ -5,7 +5,7 @@ import {
   Radio, Volume2, VolumeX, Bookmark, BookmarkCheck, BarChart2,
   ThumbsUp, Sparkles, Layers, Flame, Send
 } from 'lucide-react';
-import { useFirebase } from '../../../contexts/FirebaseContext';
+import { useSupabaseSession } from '../../../contexts/SupabaseContext';
 import { playCbSquelch, playAirHorn } from '../../../utils/cbAudio';
 
 export interface FeedPostProps {
@@ -31,7 +31,7 @@ export function FeedPost({
   onReact, onViewProfile, onOpenDirectMessage, onReport, 
   onViewMedia, onOpenRepost, openCommentsPostId, setOpenCommentsPostId 
 }: FeedPostProps) {
-  const { profile: currentUserProfile } = useFirebase();
+  const { profile: currentUserProfile } = useSupabaseSession();
   const [newCommentText, setNewCommentText] = useState('');
   const [playingAudio, setPlayingAudio] = useState(false);
 

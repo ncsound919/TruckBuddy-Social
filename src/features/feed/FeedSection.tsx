@@ -1,12 +1,12 @@
 import React, { useState, useEffect } from 'react';
 import { Post, PostComment, Profile } from '../../types';
 import { useModeration } from '../../hooks/useModeration';
-import { subscribeLivePosts, createLivePost, toggleLivePostLike, subscribeLiveComments, addLiveComment } from '../../lib/firebase';
+import { subscribeLivePosts, createLivePost, toggleLivePostLike, subscribeLiveComments, addLiveComment } from '../../lib/social-api';
 import DriverStoriesBar from './DriverStoriesBar';
 import { FeedPost } from './components/FeedPost';
 import { FeedComposer } from './components/FeedComposer';
 import { Clock, PlusCircle, Bookmark, Tag, Sparkles } from 'lucide-react';
-import { useFirebase } from '../../contexts/FirebaseContext';
+import { useSupabaseSession } from '../../contexts/SupabaseContext';
 import { useToast } from '../../hooks/useToast';
 
 interface FeedSectionProps {
@@ -17,7 +17,7 @@ interface FeedSectionProps {
 }
 
 export default function FeedSection({ onNotificationAdd, isDeadZone = false, onViewProfile, onOpenDirectMessage }: FeedSectionProps) {
-  const { profile: currentUserProfile } = useFirebase();
+  const { profile: currentUserProfile } = useSupabaseSession();
   const { fileReport } = useModeration();
   const [posts, setPosts] = useState<Post[]>([]);
 

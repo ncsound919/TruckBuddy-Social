@@ -8,13 +8,13 @@ import {
 } from '../../types';
 import { 
   sampleMileageLeaderboard, 
-  sampleMileageProofs, 
-  currentUserProfile 
+  sampleMileageProofs 
 } from '../../data';
+import { useCurrentProfile } from '../../contexts/SupabaseContext';
 import { 
   subscribeLiveMileageLeaderboard, 
   submitLiveMileageProof 
-} from '../../lib/firebase';
+} from '../../lib/social-api';
 import { 
   Trophy, 
   Camera, 
@@ -45,6 +45,7 @@ export default function MileageLeaderboardSection({
   isDeadZone = false
 }: MileageLeaderboardSectionProps) {
   const { toastMsg, showToast } = useToast();
+  const currentUserProfile = useCurrentProfile();
 
   // Leaderboard data state
   const [leaderboard, setLeaderboard] = useState<MileageLeaderboardEntry[]>(sampleMileageLeaderboard);

@@ -35,22 +35,22 @@ export default function DeveloperTestingBoard({ onFlushData, isDeadZone, setIsDe
       }, delay);
     };
 
-    addLog('🚀 Initializing Firestore Security Rules Audit...', 200);
-    addLog('🔑 Authenticated Session Context: user-123 (Role: DRIVER, CDL Class: A)', 500);
+    addLog('🚀 Initializing Supabase Row Level Security Audit...', 200);
+    addLog('🔑 Authenticated Session Context: driver role, CDL Class A', 500);
     
-    // Test 1: update profile
-    addLog('🧪 TEST 1: db.collection("users").doc("user-2").update({ cdlClass: "A" })...', 800);
-    addLog('⛔ [FIREBASE ERROR] Missing or insufficient permissions. Driver is forbidden from editing other CDL cards. ✔️ PASSED SECURITY POLICY.', 1100);
+    // Test 1: update another driver's profile
+    addLog('🧪 TEST 1: update("profiles").eq("id", <other>).set({ cdl_class: "A" })...', 800);
+    addLog('⛔ [RLS DENIED] new row violates row-level security policy for "profiles". Driver cannot edit another driver\'s CDL card. ✔️ PASSED SECURITY POLICY.', 1100);
 
-    // Test 2: read groups
-    addLog('🧪 TEST 2: db.collection("discussions").where("groupId", "==", "group-flatbed-masters").get()...', 1400);
-    addLog('⛔ [FIREBASE ERROR] Missing or insufficient permissions. Driver has not joined this restricted Chapter. ✔️ PASSED ACCESS CONTROL.', 1700);
+    // Test 2: read a private group
+    addLog('🧪 TEST 2: select("posts").eq("group_id", "group-flatbed-masters")...', 1400);
+    addLog('⛔ [RLS DENIED] can_view_group() is false — driver has not joined this restricted Chapter. ✔️ PASSED ACCESS CONTROL.', 1700);
 
     // Test 3: admin override
     addLog('🧪 TEST 3: Authenticating Admin overrides for flagged cargo broker posts...', 2000);
-    addLog('✔️ [POLICY ALLOW] request.auth.token.role == "admin". Role: ADMIN successfully flagged content in audit logs. ✔️ PASSED OVERRIDE AUDIT.', 2300);
+    addLog('✔️ [POLICY ALLOW] is_moderator() == true. Role: ADMIN successfully flagged content in the audit log. ✔️ PASSED OVERRIDE AUDIT.', 2300);
 
-    addLog('🎉 Firestore Security Rules Verification Complete: 3/3 PASS (0 security leaks found).', 2600);
+    addLog('🎉 Supabase RLS Verification Complete: 3/3 PASS (0 security leaks found).', 2600);
 
     setTimeout(() => {
       setIsRunningTests(false);

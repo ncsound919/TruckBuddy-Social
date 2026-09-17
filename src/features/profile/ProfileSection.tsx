@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { Profile, Post, UserRole, InstructorInfo, CreatorInfo, CourseOffering } from '../../types';
 import { currentUserProfile, sampleProfiles } from '../../data';
-import { saveLiveProfile, subscribeLiveProfiles } from '../../lib/firebase';
+import { saveLiveProfile, subscribeLiveProfiles } from '../../lib/social-api';
 import DriverTimelineView from './DriverTimelineView';
 import { 
   Edit2, ShieldCheck, Mail, MapPin, Truck, Compass, CheckCircle2, 

@@ -5,7 +5,7 @@ A professional social + compliance platform for CDL drivers: live road feed, US 
 ## Stack
 
 - **Frontend:** React 19, Vite 6, TypeScript, Tailwind CSS 4, vite-plugin-pwa
-- **Backend:** Firebase (Auth: email/password + Google, Firestore real-time listeners)
+- **Backend:** Supabase (Auth: email/password + Google, Postgres + Row Level Security, Realtime) — the **same project** as the Truck Buddy cab app and web portal, so a driver is one identity (`auth.users.id`) across all three
 - **API server:** Express + Google Gemini (`src/server/`) — driver chat, route advisor, HOS audit, dispatcher
 - **CI:** GitHub Actions (`.github/workflows/ci.yml`)
 
@@ -21,34 +21,32 @@ npm run dev      # starts the Express + Vite dev server on port 3000
 Copy `.env.example` to `.env` for local development:
 
 - `GEMINI_API_KEY` — server-side Gemini key for the AI endpoints. Without it, the server returns built-in fallback responses. **Never expose this key to the client.**
+- `VITE_SUPABASE_URL` / `VITE_SUPABASE_ANON_KEY` — the shared Truck Buddy Supabase project (`bxjtmcumkffcbzuhusxn`) and its anon/publishable key. The anon key is a public client identifier by design — **RLS is the security boundary**, not key secrecy. Without these, live data is disabled and the app falls back to `src/data.ts` seeds.
 
-Firebase config lives in `firebase-applet-config.json` and is imported by `src/lib/firebase.ts`. Firebase web API keys are public client identifiers — data protection comes from `firestore.rules`, not from hiding this file. Recommended hardening:
+### Data layer
 
-- Enable **App Check** (reCAPTCHA v3) in the Firebase console
-- Restrict the API key in Google Cloud Console to your deployed domains
-- Keep `firestore.rules` deployed and default-deny
+All backend access goes through one seam:
 
-## Firestore Collections
+- `src/lib/supabase.ts` — client init
+- `src/lib/social-api.ts` — `subscribeLive*` / `createLive*` / `toggleLive*` calls (same names as the old Firebase module)
+- `src/lib/social-mappers.ts` — row <-> domain mapping (client-only detail rides in each row's `metadata` JSONB)
+- `src/contexts/SupabaseContext.tsx` — session + profile provider (`useSupabaseSession`, `useCurrentProfile`)
 
-| Collection | Written by | Rules posture |
+## Supabase tables
+
+| Table | Written by | RLS posture |
 |---|---|---|
-| `users` | FirebaseContext, AuthOverlay | owner-only writes |
-| `posts` | FeedSection / FeedComposer | author-verified create, counter-only updates |
-| `posts/{id}/comments` | FeedPost | author-verified create |
-| `roadStatuses` | DriverStoriesBar | author-verified create, reaction counters |
-| `safetyReports` | RoadReportsSection | signed-in create (see TODO in rules) |
-| `convoys` | ConvoyNetworkSection | signed-in create, members/leader updates |
-| `convoys/{id}/messages` | ConvoyNetworkSection | signed-in create |
-| `memberLocations` | MemberMapSection | signed-in create (see TODO in rules) |
-| `mileageLeaderboard` | MileageLeaderboardSection | signed-in create (see TODO in rules) |
-| `mileageProofs` | MileageLeaderboardSection | signed-in create (see TODO in rules) |
+| `profiles` | SupabaseContext, AuthOverlay | signed-in read; self insert/update |
+| `posts`, `post_media`, `likes`, `comments` | FeedSection / FeedPost / FeedComposer | author-verified writes, trigger-maintained counters |
+| `road_statuses`, `road_status_reactions` | DriverStoriesBar | author creates, self reactions |
+| `safety_reports`, `safety_report_votes` | RoadReportsSection | author creates, self votes |
+| `convoys`, `convoy_members`, `convoy_messages` | ConvoyNetworkSection | leader/member gated |
+| `member_locations` | MemberMapSection | self upsert, sharing-gated read |
+| `mileage_entries`, `mileage_proofs` | MileageLeaderboardSection | self writes, moderator review |
+| `listings`, `listing_media` | MarketplaceSection | seller writes |
 
-**Important:** the app uses a *named* Firestore database (`firestoreDatabaseId` in `firebase-applet-config.json`). When deploying rules, target that database, not `(default)`:
-
-```bash
-firebase deploy --only firestore:rules
-# or paste firestore.rules into the Firebase console for the named database
-```
+Schema, RLS, counters, storage buckets and the Realtime publication are managed by
+versioned migrations in the cab app repo at `supabase/migrations/`.
 
 ## Scripts
 
@@ -59,11 +57,11 @@ firebase deploy --only firestore:rules
 
 ## Known Limitations
 
-- Marketplace listing creation is a stub pending Firebase migration (throws by design)
 - Mileage verification (OCR / ELD sync) is simulated UI, not real verification
 - Moderation queue and admin role are client-side / localStorage only
 - No test framework yet — CI runs typecheck, lint, and build only
-- Seed data in `src/data.ts` (~78KB) ships in the client bundle as a fallback when Firestore is empty
+- Seed data in `src/data.ts` (~78KB) ships in the client bundle as a fallback when the tables are empty
+- Firebase Auth users and Firestore documents have not been backfilled yet — existing accounts must be re-created in Supabase Auth
 
 ## Deployment
 

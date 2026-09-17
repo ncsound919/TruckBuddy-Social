@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { Profile } from '../../../types';
 import { Image, MapPin, Tag, PlusCircle, CheckCircle, Flame } from 'lucide-react';
-import { useFirebase } from '../../../contexts/FirebaseContext';
+import { useSupabaseSession } from '../../../contexts/SupabaseContext';
 
 export interface FeedComposerProps {
   onClose: () => void;
@@ -10,7 +10,7 @@ export interface FeedComposerProps {
 }
 
 export function FeedComposer({ onClose, onSubmit, isDeadZone }: FeedComposerProps) {
-  const { profile: currentUserProfile } = useFirebase();
+  const { profile: currentUserProfile } = useSupabaseSession();
   const [caption, setCaption] = useState('');
 
   if (!currentUserProfile) return null;

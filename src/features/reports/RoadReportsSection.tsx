@@ -1,12 +1,13 @@
 import React, { useState, useEffect } from 'react';
 import { RoadReport, RoadReportType, Profile } from '../../types';
-import { sampleRoadReports, currentUserProfile } from '../../data';
+import { sampleRoadReports } from '../../data';
+import { useCurrentProfile } from '../../contexts/SupabaseContext';
 import { broadcastCbMessage } from '../../utils/cbAudio';
 import { 
   subscribeLiveSafetyReports, 
   createLiveSafetyReport, 
   voteLiveSafetyReport 
-} from '../../lib/firebase';
+} from '../../lib/social-api';
 import { 
   AlertTriangle, 
   ShieldAlert, 
@@ -105,6 +106,7 @@ interface RoadReportsSectionProps {
 }
 
 export default function RoadReportsSection({ onViewProfile }: RoadReportsSectionProps = {}) {
+  const currentUserProfile = useCurrentProfile();
   const [reports, setReports] = useState<RoadReport[]>([]);
   const [weighStations, setWeighStations] = useState<WeighStationPreset[]>([]);
   const [filterType, setFilterType] = useState<string>('all');

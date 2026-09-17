@@ -4,8 +4,8 @@ import { playAirHorn, playHighBeamFlash, playCbSquelch, broadcastCbMessage } fro
 import { StoryViewerModal } from './components/StoryViewerModal';
 import { StoryComposerModal } from './components/StoryComposerModal';
 import { useRoadStatuses } from './hooks/useRoadStatuses';
-import { useFirebase } from '../../contexts/FirebaseContext';
-import { createLiveRoadStatus } from '../../lib/firebase';
+import { useSupabaseSession } from '../../contexts/SupabaseContext';
+import { createLiveRoadStatus } from '../../lib/social-api';
 import { 
   Plus, 
   Radio, 
@@ -18,7 +18,7 @@ interface DriverStoriesBarProps {
 }
 
 export default function DriverStoriesBar({ onOpenDirectMessage, onViewProfile }: DriverStoriesBarProps) {
-  const { profile: currentUserProfile } = useFirebase();
+  const { profile: currentUserProfile } = useSupabaseSession();
   const [activeStoryIndex, setActiveStoryIndex] = useState<number | null>(null);
   const [isPostingModalOpen, setIsPostingModalOpen] = useState(false);
   const [toastMsg, setToastMsg] = useState<string | null>(null);

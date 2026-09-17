@@ -1,8 +1,6 @@
 import React, { useState } from 'react';
 import { Truck, ShieldCheck } from 'lucide-react';
-import { auth, db, googleProvider } from '../../lib/firebase';
-import { signInWithEmailAndPassword, createUserWithEmailAndPassword, updateProfile, signInWithPopup } from 'firebase/auth';
-import { doc, setDoc, serverTimestamp } from 'firebase/firestore';
+import { supabase } from '../../lib/supabase';
 import { AuthFormInputs } from './AuthFormInputs';
 import { GoogleSignInButton } from './GoogleSignInButton';
 
@@ -24,7 +22,11 @@ export function AuthOverlay() {
     setAuthError(null);
     setAuthLoading(true);
     try {
-      await signInWithPopup(auth, googleProvider);
+      const { error } = await supabase.auth.signInWithOAuth({
+        provider: 'google',
+        options: { redirectTo: window.location.origin },
+      });
+      if (error) throw error;
     } catch (err: any) {
       setAuthError(err.message || 'Google Authentication failed');
     }
@@ -37,34 +39,52 @@ export function AuthOverlay() {
     setAuthLoading(true);
     try {
         if (isSignUpMode) {
-            const userCred = await createUserWithEmailAndPassword(auth, authEmail, authPassword);
-            await updateProfile(userCred.user, { displayName: formName });
-            
-            const profileData = {
-              id: userCred.user.uid,
-              username: formName.toLowerCase().replace(/\s+/g, '') + Math.floor(Math.random() * 100),
-              displayName: formName,
-              avatarUrl: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&q=80&w=200',
-              bio: `Professional Class ${formCdl} driver`,
-              role: 'driver',
-              cdlClass: formCdl,
-              yearsExperience: parseInt(formExp) || 0,
-              currentRig: formRig,
-              homeBase: formHome,
-              lanes: [formLane],
-              carrierName: 'Independent Hauler',
-              followerCount: 0,
-              followingCount: 0,
-              postCount: 0,
-              isVerified: formCdl === 'A',
-              safeMiles: 0,
-              joinedAt: new Date().toISOString(),
-              createdAt: serverTimestamp()
-            };
-            
-            await setDoc(doc(db, 'users', userCred.user.uid), profileData);
+            const { data, error } = await supabase.auth.signUp({
+              email: authEmail,
+              password: authPassword,
+              options: {
+                data: {
+                  full_name: formName,
+                  display_name: formName,
+                  cdl_class: formCdl,
+                },
+              },
+            });
+            if (error) throw error;
+
+            const uid = data.user?.id;
+            if (uid) {
+              // The on_auth_user_created trigger already provisioned the row
+              // (and minted a unique username); this fills in the CDL details.
+              const { error: profileError } = await supabase.from('profiles').upsert(
+                {
+                  id: uid,
+                  display_name: formName,
+                  avatar_url: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&q=80&w=200',
+                  bio: `Professional Class ${formCdl} driver`,
+                  role: 'driver',
+                  cdl_class: formCdl,
+                  years_experience: parseInt(formExp) || 0,
+                  current_rig: formRig,
+                  home_base: formHome,
+                  lanes: [formLane],
+                  carrier_name: 'Independent Hauler',
+                  is_verified: formCdl === 'A',
+                },
+                { onConflict: 'id' },
+              );
+              if (profileError) throw profileError;
+            }
+
+            if (!data.session) {
+              setAuthError('Account created. Check your email to confirm, then sign in.');
+            }
         } else {
-            await signInWithEmailAndPassword(auth, authEmail, authPassword);
+            const { error } = await supabase.auth.signInWithPassword({
+              email: authEmail,
+              password: authPassword,
+            });
+            if (error) throw error;
         }
     } catch (err: any) {
         setAuthError(err.message || 'Authentication failed');
