@@ -95,7 +95,7 @@ export function profileToRow(profile: Profile): Row {
   };
 }
 
-/** Firestore used 'image'; the schema enum uses 'photo'. */
+/** The legacy backend used 'image'; the schema enum uses 'photo'. */
 export function toDbPostType(t: string | undefined): string {
   if (!t) return 'text';
   return t === 'image' ? 'photo' : t;

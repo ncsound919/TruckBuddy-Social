@@ -23,7 +23,7 @@ import {
   GroupEvent
 } from './types';
 
-// DEPRECATED: Do not use. Use useFirebase() hook instead.
+// DEPRECATED: Do not use. Use useSupabaseSession() / useCurrentProfile() instead.
 export const currentUserProfile = {
   id: 'legacy-null',
   username: 'unknown',

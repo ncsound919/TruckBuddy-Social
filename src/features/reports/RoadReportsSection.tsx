@@ -130,7 +130,7 @@ export default function RoadReportsSection({ onViewProfile }: RoadReportsSection
   const [statusValue, setStatusValue] = useState('');
   const [weighStatus, setWeighStatus] = useState<'open_pulling' | 'closed' | 'prepass_green' | 'level1_blitz'>('open_pulling');
 
-  // Load real-time safety reports from Firestore
+  // Load real-time safety reports from Supabase
   useEffect(() => {
     const unsubscribe = subscribeLiveSafetyReports((liveReports) => {
       if (liveReports && liveReports.length > 0) {
@@ -166,7 +166,7 @@ export default function RoadReportsSection({ onViewProfile }: RoadReportsSection
     });
   };
 
-  // Upvote / Confirm report with live Firestore sync
+  // Upvote / Confirm report with live sync
   const handleUpvote = async (id: string) => {
     const report = reports.find(r => r.id === id);
     if (!report) return;
@@ -301,7 +301,7 @@ export default function RoadReportsSection({ onViewProfile }: RoadReportsSection
     }
   };
 
-  // Submit report to live Firestore
+  // Submit report to the live backend
   const handleSubmitReport = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!title.trim() || !locationName.trim()) return;

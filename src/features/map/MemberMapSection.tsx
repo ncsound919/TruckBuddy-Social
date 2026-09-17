@@ -69,7 +69,7 @@ export default function MemberMapSection({
   isDeadZone = false
 }: MemberMapSectionProps) {
   const currentUserProfile = useCurrentProfile();
-  // Member locations state with live Firestore subscription
+  // Member locations state with live subscription
   const [locations, setLocations] = useState<MemberLocation[]>(sampleMemberLocations);
 
   useEffect(() => {

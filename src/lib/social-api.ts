@@ -30,8 +30,8 @@ import type {
 
 /**
  * Live data API for the social app, backed by the shared Truck Buddy Supabase
- * project. Drop-in replacement for the old `src/lib/firebase.ts` seam: the same
- * exported names, so feature components only change their import path.
+ * project. Drop-in data seam: it keeps the same exported names the feature
+ * components already import, so only the import path changed.
  *
  * Every subscribe* function loads once, then re-loads whenever a relevant row
  * changes on a Realtime channel. Reads/writes are gated by RLS, so a signed-in

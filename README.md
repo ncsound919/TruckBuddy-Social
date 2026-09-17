@@ -28,7 +28,7 @@ Copy `.env.example` to `.env` for local development:
 All backend access goes through one seam:
 
 - `src/lib/supabase.ts` — client init
-- `src/lib/social-api.ts` — `subscribeLive*` / `createLive*` / `toggleLive*` calls (same names as the old Firebase module)
+- `src/lib/social-api.ts` — `subscribeLive*` / `createLive*` / `toggleLive*` calls (same exported names as the previous data module)
 - `src/lib/social-mappers.ts` — row <-> domain mapping (client-only detail rides in each row's `metadata` JSONB)
 - `src/contexts/SupabaseContext.tsx` — session + profile provider (`useSupabaseSession`, `useCurrentProfile`)
 
@@ -61,7 +61,6 @@ versioned migrations in the cab app repo at `supabase/migrations/`.
 - Moderation queue and admin role are client-side / localStorage only
 - No test framework yet — CI runs typecheck, lint, and build only
 - Seed data in `src/data.ts` (~78KB) ships in the client bundle as a fallback when the tables are empty
-- Firebase Auth users and Firestore documents have not been backfilled yet — existing accounts must be re-created in Supabase Auth
 
 ## Deployment
 

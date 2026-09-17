@@ -122,7 +122,7 @@ export default function ConvoyNetworkSection({
       return;
     }
 
-    // Pessimistic update for consistency with Firebase but functional for local race prevention
+    // Pessimistic update for local race prevention
     setConvoys(prev => prev.map(c => {
       if (c.id === convoyId) {
         const newMembers = joining 
