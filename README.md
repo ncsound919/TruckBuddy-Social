@@ -23,6 +23,15 @@ Copy `.env.example` to `.env` for local development:
 - `GEMINI_API_KEY` — server-side Gemini key for the AI endpoints. Without it, the server returns built-in fallback responses. **Never expose this key to the client.**
 - `VITE_SUPABASE_URL` / `VITE_SUPABASE_ANON_KEY` — the shared Truck Buddy Supabase project (`bxjtmcumkffcbzuhusxn`) and its anon/publishable key. The anon key is a public client identifier by design — **RLS is the security boundary**, not key secrecy. Without these, live data is disabled and the app falls back to `src/data.ts` seeds.
 
+Signing in here uses the **same account** as the cab app and web portal (shared
+`auth.users.id`). Notes for a new deployment:
+- Allow-list the origin in Supabase → Authentication → URL Configuration
+  (`http://localhost:3000` and `127.0.0.1:3000` are already allowed).
+- Email/password sign-up sends a confirmation link via the project's Resend
+  SMTP; `emailRedirectTo` returns the user to this app.
+- Google sign-in is not enabled on the project yet — the button explains that
+  rather than failing silently.
+
 ### Data layer
 
 All backend access goes through one seam:

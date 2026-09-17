@@ -28,7 +28,12 @@ export function AuthOverlay() {
       });
       if (error) throw error;
     } catch (err: any) {
-      setAuthError(err.message || 'Google Authentication failed');
+      const msg = String(err?.message ?? '');
+      setAuthError(
+        /not enabled|provider/i.test(msg)
+          ? 'Google sign-in is not enabled on this project yet — use email/password, or ask an admin to enable the Google provider.'
+          : msg || 'Google Authentication failed',
+      );
     }
     setAuthLoading(false);
   };
@@ -43,6 +48,8 @@ export function AuthOverlay() {
               email: authEmail,
               password: authPassword,
               options: {
+                // Return the confirmation link to this app, not the portal.
+                emailRedirectTo: window.location.origin,
                 data: {
                   full_name: formName,
                   display_name: formName,
