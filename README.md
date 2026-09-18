@@ -29,10 +29,10 @@ Signing in here uses the **same account** as the cab app and web portal (shared
   (`http://localhost:3000` and `127.0.0.1:3000` are already allowed).
 - Email/password sign-up sends a confirmation link via the project's Resend
   SMTP; `emailRedirectTo` returns the user to this app.
-- Google sign-in is enabled on the project. It currently shares the Uplift OAuth
-  client (GCP project `553720946274`), so the Google consent screen shows that
-  app's branding — issue a dedicated Truck Buddy client if that matters. If the
-  consent screen is in "Testing" mode, only added test users can sign in.
+- Google sign-in uses a dedicated Truck Buddy OAuth client (GCP project
+  `truck-buddy-auth`, consent screen published to production), so the consent
+  screen shows "Truck Buddy" rather than another app's branding. The client
+  id/secret live in KeyWire (project `Truck Buddy`).
 
 ### Data layer
 
