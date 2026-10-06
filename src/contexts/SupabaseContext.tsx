@@ -2,8 +2,19 @@ import React, { createContext, useContext, useEffect, useState } from 'react';
 import type { User } from '@supabase/supabase-js';
 import { supabase } from '../lib/supabase';
 import { fallbackProfile, rowToProfile } from '../lib/social-mappers';
-import { currentUserProfile as seedProfile } from '../data';
+import { currentUserProfile as placeholderProfile } from '../data';
 import type { Profile } from '../types';
+
+/** Build the signed-in user's profile from their auth identity (never a fake name). */
+function profileFromUser(user: User): Profile {
+  const meta = (user.user_metadata ?? {}) as { full_name?: string; name?: string; avatar_url?: string };
+  const handle = (user.email ?? '').split('@')[0] || 'driver';
+  return fallbackProfile(user.id, {
+    username: handle,
+    displayName: meta.full_name || meta.name || handle,
+    avatarUrl: meta.avatar_url || '',
+  });
+}
 
 /**
  * Session + profile provider backed by the shared Truck Buddy Supabase project.
@@ -26,14 +37,15 @@ export function SupabaseProvider({ children }: { children: React.ReactNode }) {
   const [profile, setProfile] = useState<Profile | null>(null);
   const [loading, setLoading] = useState(true);
 
-  const fetchProfile = async (uid: string) => {
+  const fetchProfile = async (sessionUser: User) => {
+    const uid = sessionUser.id;
     const { data, error } = await supabase.from('profiles').select('*').eq('id', uid).maybeSingle();
     if (error) {
       console.error('[supabase] profile fetch failed:', error.message);
-      setProfile(fallbackProfile(uid));
+      setProfile(profileFromUser(sessionUser));
       return;
     }
-    setProfile(data ? rowToProfile(data) : fallbackProfile(uid));
+    setProfile(data ? rowToProfile(data) : profileFromUser(sessionUser));
   };
 
   useEffect(() => {
@@ -44,7 +56,7 @@ export function SupabaseProvider({ children }: { children: React.ReactNode }) {
       const sessionUser = data.session?.user ?? null;
       setUser(sessionUser);
       if (sessionUser) {
-        void fetchProfile(sessionUser.id).finally(() => active && setLoading(false));
+        void fetchProfile(sessionUser).finally(() => active && setLoading(false));
       } else {
         setLoading(false);
       }
@@ -54,7 +66,7 @@ export function SupabaseProvider({ children }: { children: React.ReactNode }) {
       const sessionUser = session?.user ?? null;
       setUser(sessionUser);
       if (sessionUser) {
-        void fetchProfile(sessionUser.id);
+        void fetchProfile(sessionUser);
       } else {
         setProfile(null);
       }
@@ -67,7 +79,7 @@ export function SupabaseProvider({ children }: { children: React.ReactNode }) {
   }, []);
 
   const refreshProfile = async () => {
-    if (user) await fetchProfile(user.id);
+    if (user) await fetchProfile(user);
   };
 
   return (
@@ -86,11 +98,13 @@ export function useSupabaseSession(): SupabaseSessionValue {
 }
 
 /**
- * Always returns a Profile: the signed-in driver's row, or the seed placeholder
- * while the session is still resolving. Components that read `currentUserProfile`
- * should use this so writes satisfy RLS (`author_id = auth.uid()`).
+ * The signed-in driver's profile. While the session resolves, or if no profile
+ * row exists yet, it is derived from the auth identity — never a fabricated
+ * driver name.
  */
 export function useCurrentProfile(): Profile {
-  const { profile } = useSupabaseSession();
-  return profile ?? (seedProfile as Profile);
+  const { profile, user } = useSupabaseSession();
+  if (profile) return profile;
+  if (user) return profileFromUser(user);
+  return placeholderProfile as Profile;
 }
