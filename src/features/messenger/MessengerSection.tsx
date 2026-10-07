@@ -3,6 +3,7 @@ import { MessageThread, DirectMessage, Profile } from '../../types';
 import { initialMessageThreads, initialDirectMessages, sampleProfiles } from '../../data';
 import { broadcastCbMessage } from '../../utils/cbAudio';
 import { MessageSquare, Send, Users, ShieldAlert, Check, Clock, UserCheck, Plus, X, Radio, Volume2 } from 'lucide-react';
+import { apiFetch } from '../../lib/api-fetch';
 
 interface MessengerSectionProps {
   isDeadZone?: boolean;
@@ -150,7 +151,7 @@ export default function MessengerSection({
     // Trigger AI response as the driver participant!
     setIsTyping(true);
     try {
-      const response = await fetch('/api/gemini/driver-chat', {
+      const response = await apiFetch('/api/gemini/driver-chat', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({

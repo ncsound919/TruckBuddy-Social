@@ -88,7 +88,8 @@ export default function MemberMapSection({
   // Location broadcasting toggle
   const [isSharingLocation, setIsSharingLocation] = useState<boolean>(() => {
     const saved = localStorage.getItem('trucker_broadcast_location');
-    return saved !== null ? JSON.parse(saved) : true;
+    // Default OFF: broadcasting a driver's location must always be an explicit choice.
+    return saved !== null ? JSON.parse(saved) : false;
   });
 
   // Current user's 20 status
@@ -179,18 +180,17 @@ export default function MemberMapSection({
   const handleToggleSharing = async (enabled: boolean) => {
     setIsSharingLocation(enabled);
     localStorage.setItem('trucker_broadcast_location', JSON.stringify(enabled));
-    
-    let updatedLoc: MemberLocation | undefined;
-    setLocations(prev => {
-      const updated = prev.map(loc => {
-        if (loc.driver.id === currentUserProfile.id) {
-          updatedLoc = { ...loc, isSharingLocation: enabled };
-          return updatedLoc;
-        }
-        return loc;
-      });
-      return updated;
-    });
+
+    // Compute the updated row outside the state updater: React may run the
+    // updater later, so assigning inside it left updatedLoc undefined and the
+    // API call never happened.
+    const current = locations.find((loc) => loc.driver.id === currentUserProfile.id);
+    const updatedLoc: MemberLocation | undefined = current
+      ? { ...current, isSharingLocation: enabled }
+      : undefined;
+    setLocations((prev) =>
+      prev.map((loc) => (loc.driver.id === currentUserProfile.id ? { ...loc, isSharingLocation: enabled } : loc)),
+    );
 
     if (updatedLoc) {
       try {
@@ -201,33 +201,27 @@ export default function MemberMapSection({
     }
 
     if (enabled) {
-      showToast('🟢 Live 20 Broadcast Active: Verified CDL members can locate your rig along highway corridors.');
+      showToast('Live 20 broadcast is ON: other members can see your corridor position on the map.');
     } else {
-      showToast('🔒 Ghost Mode Active: Your rig coordinates are hidden. You still have full radar visibility.');
+      showToast('Ghost mode is ON: your position is hidden. You still have full map visibility.');
     }
   };
 
   // Update current user's 20
   const handleUpdateMy20 = async (e: React.FormEvent) => {
     e.preventDefault();
-    let updatedLoc: MemberLocation | undefined;
-    setLocations(prev => {
-      const updated = prev.map(loc => {
-        if (loc.driver.id === currentUserProfile.id) {
-          updatedLoc = {
-            ...loc,
-            status: userStatus,
-            speedMph: userStatus === 'rolling' ? userSpeed : 0,
-            corridor: userCorridor,
-            statusNote: userStatusNote,
-            lastUpdated: 'Just now'
-          };
-          return updatedLoc;
-        }
-        return loc;
-      });
-      return updated;
-    });
+    const next = {
+      status: userStatus,
+      speedMph: userStatus === 'rolling' ? userSpeed : 0,
+      corridor: userCorridor,
+      statusNote: userStatusNote,
+      lastUpdated: 'Just now',
+    };
+    const current = locations.find((loc) => loc.driver.id === currentUserProfile.id);
+    const updatedLoc: MemberLocation | undefined = current ? { ...current, ...next } : undefined;
+    setLocations((prev) =>
+      prev.map((loc) => (loc.driver.id === currentUserProfile.id ? { ...loc, ...next } : loc)),
+    );
 
     if (updatedLoc) {
       try {

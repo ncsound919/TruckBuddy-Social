@@ -1,37 +1,10 @@
 import express from 'express';
 import path from 'path';
 import { createServer as createViteServer } from 'vite';
-import chatRouter from './routes/chat';
-import advisorRouter from './routes/advisor';
-import auditRouter from './routes/audit';
-import dispatcherRouter from './routes/dispatcher';
+import { createApiApp } from './app';
 
-const app = express();
-const PORT = 3000;
-
-app.use(express.json({ limit: '10mb' }));
-
-// Gemini API Routes
-app.use('/api/gemini', chatRouter);
-app.use('/api/gemini', advisorRouter);
-app.use('/api/gemini', auditRouter);
-app.use('/api/gemini', dispatcherRouter);
-
-// Health check
-app.get('/api/health', (req, res) => {
-  res.json({ status: 'ok', time: new Date().toISOString() });
-});
-
-// Global Error Handler
-app.use((err: any, req: express.Request, res: express.Response, next: express.NextFunction) => {
-  console.error('Server Error:', err);
-  res.status(err.status || 500).json({
-    error: {
-      message: err.message || 'Internal Server Error',
-      code: err.code || 'INTERNAL_ERROR'
-    }
-  });
-});
+const app = createApiApp();
+const PORT = Number(process.env.PORT ?? 3000);
 
 // Vite middleware or static serving
 async function startServer() {

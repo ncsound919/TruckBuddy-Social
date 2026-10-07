@@ -1,4 +1,11 @@
-import { useState, useEffect } from 'react';
+import { useEffect, useState } from 'react';
+
+import {
+  createLiveReport,
+  resolveLiveReport,
+  subscribeLiveReports,
+  type LiveModerationReport,
+} from '../lib/social-api';
 
 export interface ModerationReport {
   id: string;
@@ -10,58 +17,52 @@ export interface ModerationReport {
   status: 'pending' | 'resolved' | 'dismissed';
 }
 
+function toUiReport(r: LiveModerationReport): ModerationReport {
+  const entityType = (['post', 'listing', 'road_report'].includes(r.targetType)
+    ? r.targetType
+    : 'post') as ModerationReport['entityType'];
+  const status: ModerationReport['status'] =
+    r.status === 'open' ? 'pending' : r.status === 'actioned' ? 'resolved' : 'dismissed';
+  return {
+    id: r.id,
+    entityId: r.targetRef,
+    entityType,
+    reason: r.details || r.reason,
+    reportedBy: r.reporterId,
+    reportedAt: r.createdAt,
+    status,
+  };
+}
+
+/**
+ * Moderation queue backed by Supabase `reports` / `moderation_actions`.
+ * RLS decides visibility (your own reports, or all for a moderator) and
+ * write permission — there is no client-side queue.
+ */
 export function useModeration() {
   const [reports, setReports] = useState<ModerationReport[]>([]);
 
-  useEffect(() => {
-    const cached = localStorage.getItem('trucker_moderation_reports');
-    if (cached) {
-      setReports(JSON.parse(cached));
-    } else {
-      const initial: ModerationReport[] = [
-        {
-          id: 'rep-1',
-          entityId: 'post-2',
-          entityType: 'post',
-          reason: 'Spam advertising cargo brokers without commercial broker licenses.',
-          reportedBy: 'DieselDuchess',
-          reportedAt: new Date(Date.now() - 3600000).toISOString(),
-          status: 'pending'
-        }
-      ];
-      setReports(initial);
-      localStorage.setItem('trucker_moderation_reports', JSON.stringify(initial));
+  useEffect(() => subscribeLiveReports((rows) => setReports(rows.map(toUiReport))), []);
+
+  const fileReport = async (
+    entityId: string,
+    entityType: 'post' | 'listing' | 'road_report',
+    reason: string,
+  ) => {
+    try {
+      await createLiveReport({ targetType: entityType, targetId: entityId, reason });
+    } catch (e) {
+      console.warn('[moderation] failed to file report:', e);
     }
-  }, []);
-
-  const saveReports = (updated: ModerationReport[]) => {
-    setReports(updated);
-    localStorage.setItem('trucker_moderation_reports', JSON.stringify(updated));
   };
 
-  const fileReport = (entityId: string, entityType: 'post' | 'listing' | 'road_report', reason: string) => {
-    const newReport: ModerationReport = {
-      id: `rep-${Date.now()}`,
-      entityId,
-      entityType,
-      reason,
-      reportedBy: 'OverdriveWill',
-      reportedAt: new Date().toISOString(),
-      status: 'pending'
-    };
-
-    const updated = [newReport, ...reports];
-    saveReports(updated);
+  const updateReportStatus = async (id: string, next: 'resolved' | 'dismissed') => {
+    try {
+      await resolveLiveReport(id, next === 'dismissed' ? 'dismiss' : 'remove_content');
+    } catch (e) {
+      console.warn('[moderation] failed to resolve report:', e);
+    }
   };
 
-  const updateReportStatus = (id: string, newStatus: 'resolved' | 'dismissed') => {
-    const updated = reports.map(r => r.id === id ? { ...r, status: newStatus } : r);
-    saveReports(updated);
-  };
-
-  return {
-    reports,
-    fileReport,
-    updateReportStatus
-  };
+  return { reports, fileReport, updateReportStatus };
 }

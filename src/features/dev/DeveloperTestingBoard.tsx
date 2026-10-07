@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useModeration, ModerationReport } from '../../hooks/useModeration';
+import { supabase, currentUserId } from '../../lib/supabase';
 import { Shield, CheckCircle2, Play, AlertTriangle, CloudOff, Globe, Database, HelpCircle, Eye } from 'lucide-react';
 
 interface DeveloperTestingBoardProps {
@@ -24,51 +25,42 @@ export default function DeveloperTestingBoard({ onFlushData, isDeadZone, setIsDe
     }
   }, [isDeadZone]);
 
-  const handleRunRlsTests = () => {
+  const handleRunRlsTests = async () => {
     setIsRunningTests(true);
     setTestLogs([]);
     const logs: string[] = [];
-
-    const addLog = (text: string, delay: number) => {
-      setTimeout(() => {
-        setTestLogs(prev => [...prev, text]);
-      }, delay);
-    };
-
-    addLog('🚀 Initializing Supabase Row Level Security Audit...', 200);
-    addLog('🔑 Authenticated Session Context: driver role, CDL Class A', 500);
-    
-    // Test 1: update another driver's profile
-    addLog('🧪 TEST 1: update("profiles").eq("id", <other>).set({ cdl_class: "A" })...', 800);
-    addLog('⛔ [RLS DENIED] new row violates row-level security policy for "profiles". Driver cannot edit another driver\'s CDL card. ✔️ PASSED SECURITY POLICY.', 1100);
-
-    // Test 2: read a private group
-    addLog('🧪 TEST 2: select("posts").eq("group_id", "group-flatbed-masters")...', 1400);
-    addLog('⛔ [RLS DENIED] can_view_group() is false — driver has not joined this restricted Chapter. ✔️ PASSED ACCESS CONTROL.', 1700);
-
-    // Test 3: admin override
-    addLog('🧪 TEST 3: Authenticating Admin overrides for flagged cargo broker posts...', 2000);
-    addLog('✔️ [POLICY ALLOW] is_moderator() == true. Role: ADMIN successfully flagged content in the audit log. ✔️ PASSED OVERRIDE AUDIT.', 2300);
-
-    addLog('🎉 Supabase RLS Verification Complete: 3/3 PASS (0 security leaks found).', 2600);
-
-    setTimeout(() => {
-      setIsRunningTests(false);
-    }, 2700);
+    const push = (t: string) => logs.push(t);
+    push('Running live RLS checks against Supabase...');
+    try {
+      if (!supabase) {
+        push('Supabase is not configured in this build; nothing to verify.');
+      } else {
+        const uid = await currentUserId();
+        push(`Session: ${uid ? `${uid.slice(0, 8)}...` : 'anonymous (no session)'}`);
+        const { data, error } = await supabase.from('member_locations').select('user_id').limit(50);
+        if (error) {
+          push(`member_locations select error: ${error.message}`);
+        } else {
+          const others = (data ?? []).filter((r) => r.user_id !== uid).length;
+          push(`member_locations: ${others} row(s) from other drivers readable (only sharing rows should be).`);
+        }
+        const { error: wErr } = await supabase
+          .from('reports')
+          .update({ status: 'dismissed' })
+          .eq('id', '00000000-0000-0000-0000-000000000000');
+        push(wErr ? `reports write probe rejected: ${wErr.message}` : 'reports write probe: no error (verify RLS).');
+      }
+      push('Done. These are live results, not canned output.');
+    } catch (e) {
+      push(`check failed: ${e instanceof Error ? e.message : String(e)}`);
+    }
+    setTestLogs(logs);
+    setIsRunningTests(false);
   };
 
   const handleResolveReport = (report: ModerationReport, action: 'resolved' | 'dismissed') => {
-    updateReportStatus(report.id, action);
-    
-    // Remove the actual post if resolved
-    if (action === 'resolved') {
-      const cachedPosts = localStorage.getItem('trucker_posts');
-      if (cachedPosts) {
-        const posts = JSON.parse(cachedPosts);
-        const filtered = posts.filter((p: any) => p.id !== report.entityId);
-        localStorage.setItem('trucker_posts', JSON.stringify(filtered));
-      }
-    }
+    // Writes a moderation_actions row and updates the report status in the DB.
+    void updateReportStatus(report.id, action);
   };
 
   const pendingReports = reports.filter(r => r.status === 'pending');

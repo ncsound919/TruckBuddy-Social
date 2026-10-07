@@ -56,6 +56,9 @@ const COLLECTIONS: Record<string, { table: string; filter?: string }> = {
   mileageProofs: { table: 'mileage_proofs' },
   listings: { table: 'listings' },
   profiles: { table: 'profiles' },
+  reports: { table: 'reports' },
+  postMedia: { table: 'post_media' },
+  listingMedia: { table: 'listing_media' },
 };
 
 function live<T>(
@@ -102,7 +105,7 @@ function live<T>(
 export function subscribeLivePosts(onUpdate: (posts: Post[]) => void): Unsubscribe {
   return live(
     'live-posts',
-    ['posts', 'profiles', 'likes', 'post_media'],
+    ['posts', 'profiles', 'likes', 'postMedia'],
     async () => {
       const { data, error } = await supabase
         .from('posts')
@@ -207,7 +210,7 @@ export function subscribeLiveRoadStatuses(onUpdate: (statuses: DriverRoadStatus[
   const uidPromise = currentUserId();
   return live(
     'live-road-statuses',
-    ['road_statuses', 'road_status_reactions', 'profiles'],
+    ['roadStatuses', 'roadStatusReactions', 'profiles'],
     async () => {
       const { data, error } = await supabase
         .from('road_statuses')
@@ -268,7 +271,7 @@ export async function updateLiveRoadStatusReaction(
 export function subscribeLiveSafetyReports(onUpdate: (reports: RoadReport[]) => void): Unsubscribe {
   return live(
     'live-safety-reports',
-    ['safety_reports', 'safety_report_votes', 'profiles'],
+    ['safetyReports', 'safetyReportVotes', 'profiles'],
     async () => {
       const { data, error } = await supabase
         .from('safety_reports')
@@ -334,7 +337,7 @@ export async function voteLiveSafetyReport(
 export function subscribeLiveConvoys(onUpdate: (convoys: ConvoyBeacon[]) => void): Unsubscribe {
   return live(
     'live-convoys',
-    ['convoys', 'convoy_members', 'profiles'],
+    ['convoys', 'convoyMembers', 'profiles'],
     async () => {
       const { data, error } = await supabase
         .from('convoys')
@@ -473,13 +476,28 @@ export function subscribeLiveMemberLocations(onUpdate: (locs: MemberLocation[]) 
   );
 }
 
+/**
+ * Round a coordinate to the precision implied by the privacy level. Even
+ * 'exact' is coarsened to ~110 m; the map never stores a precise fix.
+ */
+export function quantizeCoord(value: number, level: MemberLocation['privacyLevel']): number {
+  const decimals = level === 'corridor' ? 2 : 3; // ~1.1 km vs ~110 m
+  return Number(value.toFixed(decimals));
+}
+
 export async function updateLiveMemberLocation(loc: MemberLocation): Promise<void> {
   const uid = loc.driver?.id ?? loc.id;
+  // Opt-out/hidden = leave no location on the server at all.
+  if (!loc.isSharingLocation || loc.privacyLevel === 'hidden') {
+    const { error } = await supabase.from('member_locations').delete().eq('user_id', uid);
+    if (error) throw error;
+    return;
+  }
   const { error } = await supabase.from('member_locations').upsert(
     {
       user_id: uid,
-      latitude: loc.lat,
-      longitude: loc.lng,
+      latitude: quantizeCoord(loc.lat, loc.privacyLevel),
+      longitude: quantizeCoord(loc.lng, loc.privacyLevel),
       location_name: loc.city || loc.destinationCity || '',
       status: loc.status,
       is_sharing: loc.isSharingLocation,
@@ -576,7 +594,7 @@ export async function submitLiveMileageProof(entry: MileageProof, driver: Profil
 export function subscribeLiveListings(onUpdate: (listings: Listing[]) => void): Unsubscribe {
   return live(
     'live-listings',
-    ['listings', 'profiles'],
+    ['listings', 'listingMedia', 'profiles'],
     async () => {
       const { data, error } = await supabase
         .from('listings')
@@ -624,6 +642,141 @@ export async function createLiveListing(listingData: Partial<Listing>): Promise<
 export async function deleteLiveListing(listingId: string): Promise<void> {
   const { error } = await supabase.from('listings').delete().eq('id', listingId);
   if (error) throw error;
+}
+
+/* ------------------------------------------------------------------ */
+/* Moderation (reports + moderation_actions, DB-backed)                */
+/* ------------------------------------------------------------------ */
+
+export type ReportReasonEnum = 'spam' | 'harassment' | 'inappropriate' | 'misinformation' | 'other';
+
+export interface LiveModerationReport {
+  id: string;
+  reporterId: string;
+  targetType: string;
+  targetRef: string;
+  reason: string;
+  details: string | null;
+  status: 'open' | 'actioned' | 'dismissed';
+  createdAt: string;
+}
+
+/** Map a free-text UI reason onto the DB `report_reason` enum. */
+export function toReportReason(text: string): ReportReasonEnum {
+  const t = (text || '').toLowerCase();
+  if (t.includes('spam') || t.includes('advert') || t.includes('broker license')) return 'spam';
+  if (t.includes('harass') || t.includes('threat')) return 'harassment';
+  if (t.includes('inappropriate') || t.includes('explicit') || t.includes('abuse')) return 'inappropriate';
+  if (t.includes('misinformation') || t.includes('false') || t.includes('rumor')) return 'misinformation';
+  return 'other';
+}
+
+export function rowToLiveReport(row: Record<string, any>): LiveModerationReport {
+  return {
+    id: row.id,
+    reporterId: row.reporter_id ?? '',
+    targetType: row.target_type ?? 'post',
+    targetRef: row.target_ref ?? row.target_id ?? '',
+    reason: row.reason ?? 'other',
+    details: row.details ?? null,
+    status: (row.status ?? 'open') as LiveModerationReport['status'],
+    createdAt: row.created_at ?? new Date().toISOString(),
+  };
+}
+
+export function subscribeLiveReports(onUpdate: (reports: LiveModerationReport[]) => void): Unsubscribe {
+  return live(
+    'live-reports',
+    ['reports', 'profiles'],
+    async () => {
+      if (!isSupabaseConfigured) return [];
+      const { data, error } = await supabase
+        .from('reports')
+        .select('*')
+        .order('created_at', { ascending: false })
+        .limit(200);
+      if (error) throw error;
+      return (data ?? []).map(rowToLiveReport);
+    },
+    onUpdate,
+  );
+}
+
+const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+
+function uuidv4(): string {
+  const c = globalThis.crypto;
+  if (c?.randomUUID) return c.randomUUID();
+  return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, (ch) => {
+    const r = (Math.random() * 16) | 0;
+    const v = ch === 'x' ? r : (r & 0x3) | 0x8;
+    return v.toString(16);
+  });
+}
+
+export async function createLiveReport(input: {
+  targetType: 'post' | 'listing' | 'road_report';
+  targetId: string;
+  reason: string;
+  details?: string;
+}): Promise<string> {
+  const uid = await currentUserId();
+  if (!uid) throw new Error('Sign in to file a report');
+  const ref = String(input.targetId);
+  const targetId = UUID_RE.test(ref) ? ref : uuidv4();
+  const { data, error } = await supabase
+    .from('reports')
+    .insert({
+      reporter_id: uid,
+      target_type: input.targetType,
+      target_id: targetId,
+      target_ref: ref,
+      reason: toReportReason(input.reason),
+      details: input.details ?? input.reason ?? null,
+    })
+    .select('id')
+    .single();
+  if (error) throw error;
+  return (data as { id: string }).id;
+}
+
+export async function resolveLiveReport(
+  reportId: string,
+  action: 'dismiss' | 'remove_content' | 'warn' | 'ban_user',
+): Promise<void> {
+  const uid = await currentUserId();
+  if (!uid) throw new Error('Sign in to moderate');
+
+  // Fetch the target first so 'remove_content' actually hides it.
+  const { data: report } = await supabase
+    .from('reports')
+    .select('target_type,target_ref,target_id')
+    .eq('id', reportId)
+    .maybeSingle();
+
+  if (action === 'remove_content' && report) {
+    const r = report as { target_type: string; target_ref: string | null; target_id: string };
+    const table = r.target_type === 'listing' ? 'listings' : r.target_type === 'road_report' ? 'road_reports' : 'posts';
+    const key = r.target_ref && UUID_RE.test(r.target_ref) ? r.target_ref : r.target_id;
+    const { error: contentError } = await supabase.from(table).update({ is_removed: true }).eq('id', key);
+    if (contentError) throw contentError;
+  }
+
+  const { error } = await supabase
+    .from('reports')
+    .update({
+      status: action === 'dismiss' ? 'dismissed' : 'actioned',
+      resolved_by: uid,
+      resolved_at: new Date().toISOString(),
+    })
+    .eq('id', reportId);
+  if (error) throw error;
+
+  // Action row last, so a rejected report update does not leave an orphan action.
+  const { error: actionError } = await supabase
+    .from('moderation_actions')
+    .insert({ moderator_id: uid, report_id: reportId, action });
+  if (actionError) throw actionError;
 }
 
 /* ------------------------------------------------------------------ */

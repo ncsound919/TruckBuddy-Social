@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { ChatMessage } from '../../types';
 import { Truck, Send, HelpCircle, Shield, AlertTriangle, CloudRain, Scale } from 'lucide-react';
+import { apiFetch } from '../../lib/api-fetch';
 
 export default function AIDispatcherSection() {
   const [messages, setMessages] = useState<ChatMessage[]>([]);
@@ -40,7 +41,7 @@ export default function AIDispatcherSection() {
     setIsLoading(true);
 
     try {
-      const response = await fetch('/api/gemini/dispatcher', {
+      const response = await apiFetch('/api/gemini/dispatcher', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({

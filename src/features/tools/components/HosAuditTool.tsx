@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { Clock, Bot, ShieldCheck } from 'lucide-react';
+import { apiFetch } from '../../../lib/api-fetch';
 
 export function HosAuditTool() {
   const [drivingTime, setDrivingTime] = useState<number>(6.5);
@@ -13,7 +14,7 @@ export function HosAuditTool() {
   const handleRunAiHosAudit = async () => {
     setIsAuditingHos(true);
     try {
-      const response = await fetch('/api/gemini/hos-audit', {
+      const response = await apiFetch('/api/gemini/hos-audit', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({

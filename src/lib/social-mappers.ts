@@ -268,7 +268,7 @@ export function rowToMemberLocation(row: Row): MemberLocation {
     destinationCity: meta.destinationCity ?? '',
     rigType: meta.rigType ?? '',
     lastUpdated: row.updated_at ?? new Date().toISOString(),
-    isSharingLocation: row.is_sharing ?? true,
+    isSharingLocation: row.is_sharing ?? false,
     privacyLevel: meta.privacyLevel ?? 'corridor',
     statusNote: meta.statusNote,
   };
