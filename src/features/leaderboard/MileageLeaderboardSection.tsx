@@ -15,6 +15,7 @@ import {
   subscribeLiveMileageLeaderboard, 
   submitLiveMileageProof 
 } from '../../lib/social-api';
+import { methodLabel, MILEAGE_REVIEW_STATUS } from '../../lib/mileage';
 import { 
   Trophy, 
   Camera, 
@@ -132,13 +133,9 @@ export default function MileageLeaderboardSection({
       originCity: data.originCity,
       destinationCity: data.destCity,
       dateLogged: new Date().toISOString(),
-      verificationBadge: data.selectedMethod === 'odometer_photo' 
-        ? 'Verified Odometer OCR' 
-        : data.selectedMethod === 'eld_telematics' 
-        ? 'ELD Telematics Direct Sync' 
-        : 'Certified Scale / BOL Stamp',
+      verificationBadge: methodLabel(data.selectedMethod),
       verificationCode: authCode,
-      status: 'verified',
+      status: MILEAGE_REVIEW_STATUS,
       notes: data.runNotes,
       rigUnit: data.rigUnit,
       upvotes: 1
@@ -192,7 +189,7 @@ export default function MileageLeaderboardSection({
     });
 
     setIsSubmitModalOpen(false);
-    showToast(`🏆 Run Logged! +${milesDelta.toLocaleString()} verified miles synced!`);
+    showToast(`🏆 Run Logged! +${milesDelta.toLocaleString()} miles submitted for review.`);
   };
 
   const handleUpvoteProof = (proofId: string) => {

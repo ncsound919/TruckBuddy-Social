@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { Scale, Zap } from 'lucide-react';
+import { federalBridgeLimit } from '../../../lib/hos';
 
 export function AxleWeightCalculator() {
   const [steerWeight, setSteerWeight] = useState<number>(11800);
@@ -14,11 +15,8 @@ export function AxleWeightCalculator() {
   const maxTrailerLimit = 34000;
   const gvwrLimit = 80000;
 
-  const calculateFederalBridgeLimit = (L: number, N: number) => {
-    return Math.round(500 * ((L * N) / (N - 1) + 12 * N + 36));
-  };
-
-  const bridgeFormulaLimit = calculateFederalBridgeLimit(bridgeLength, numberOfAxles);
+  // Clamped to the 80,000 lb federal max; 0 (not Infinity) for an invalid axle count.
+  const bridgeFormulaLimit = federalBridgeLimit(bridgeLength, numberOfAxles);
   const isSteerExcess = steerWeight > maxSteerLimit;
   const isDriveExcess = driveWeight > maxDriveLimit;
   const isTrailerExcess = trailerWeight > maxTrailerLimit;

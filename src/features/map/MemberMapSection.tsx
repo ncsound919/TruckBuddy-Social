@@ -6,6 +6,7 @@ import {
   subscribeLiveMemberLocations, 
   updateLiveMemberLocation 
 } from '../../lib/social-api';
+import { coordForHomeBase } from '../../lib/geo';
 import {
   MAP_BOUNDS,
   projectCoords,
@@ -176,28 +177,53 @@ export default function MemberMapSection({
     }
   };
 
+  // Build this user's location row: reuse the existing one, or synthesize it on
+  // first share so the toggle is never a silent no-op.
+  const resolveUserRow = (overrides: Partial<MemberLocation>): MemberLocation => {
+    const current = locations.find((loc) => loc.driver.id === currentUserProfile.id);
+    if (current) return { ...current, ...overrides };
+    const coord = coordForHomeBase(currentUserProfile.homeBase);
+    return {
+      id: currentUserProfile.id,
+      driver: currentUserProfile,
+      lat: coord.lat,
+      lng: coord.lng,
+      city: userCity,
+      state: '',
+      corridor: userCorridor,
+      status: userStatus,
+      speedMph: userStatus === 'rolling' ? userSpeed : 0,
+      heading: 'EB',
+      destinationCity: '',
+      rigType: currentUserProfile.currentRig,
+      lastUpdated: 'Just now',
+      isSharingLocation: true,
+      privacyLevel: 'corridor',
+      statusNote: userStatusNote,
+      ...overrides,
+    };
+  };
+
   // Handle sharing toggle
   const handleToggleSharing = async (enabled: boolean) => {
     setIsSharingLocation(enabled);
     localStorage.setItem('trucker_broadcast_location', JSON.stringify(enabled));
 
-    // Compute the updated row outside the state updater: React may run the
-    // updater later, so assigning inside it left updatedLoc undefined and the
-    // API call never happened.
-    const current = locations.find((loc) => loc.driver.id === currentUserProfile.id);
-    const updatedLoc: MemberLocation | undefined = current
-      ? { ...current, isSharingLocation: enabled }
-      : undefined;
-    setLocations((prev) =>
-      prev.map((loc) => (loc.driver.id === currentUserProfile.id ? { ...loc, isSharingLocation: enabled } : loc)),
-    );
+    // Build the row from current state first. If the user has no location row yet
+    // (their first time sharing), synthesize one so the write actually happens —
+    // previously the API call was skipped and the UI toasted a false success.
+    const row = resolveUserRow({ isSharingLocation: enabled });
+    setLocations((prev) => {
+      const exists = prev.some((loc) => loc.driver.id === currentUserProfile.id);
+      return exists
+        ? prev.map((loc) => (loc.driver.id === currentUserProfile.id ? { ...loc, isSharingLocation: enabled } : loc))
+        : [...prev, row];
+    });
 
-    if (updatedLoc) {
-      try {
-        await updateLiveMemberLocation(updatedLoc);
-      } catch (e) {
-        console.warn('Live location sync note:', e);
-      }
+    try {
+      await updateLiveMemberLocation(row);
+    } catch (e) {
+      console.warn('Live location sync note:', e);
     }
 
     if (enabled) {
@@ -217,18 +243,18 @@ export default function MemberMapSection({
       statusNote: userStatusNote,
       lastUpdated: 'Just now',
     };
-    const current = locations.find((loc) => loc.driver.id === currentUserProfile.id);
-    const updatedLoc: MemberLocation | undefined = current ? { ...current, ...next } : undefined;
-    setLocations((prev) =>
-      prev.map((loc) => (loc.driver.id === currentUserProfile.id ? { ...loc, ...next } : loc)),
-    );
+    const row = resolveUserRow({ ...next, isSharingLocation });
+    setLocations((prev) => {
+      const exists = prev.some((loc) => loc.driver.id === currentUserProfile.id);
+      return exists
+        ? prev.map((loc) => (loc.driver.id === currentUserProfile.id ? { ...loc, ...next } : loc))
+        : [...prev, row];
+    });
 
-    if (updatedLoc) {
-      try {
-        await updateLiveMemberLocation(updatedLoc);
-      } catch (e) {
-        console.warn('Live location sync note:', e);
-      }
+    try {
+      await updateLiveMemberLocation(row);
+    } catch (e) {
+      console.warn('Live location sync note:', e);
     }
 
     playAirHornSound();

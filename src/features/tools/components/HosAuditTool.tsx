@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { Clock, Bot, ShieldCheck } from 'lucide-react';
 import { apiFetch } from '../../../lib/api-fetch';
+import { evaluateHos } from '../../../lib/hos';
 
 export function HosAuditTool() {
   const [drivingTime, setDrivingTime] = useState<number>(6.5);
@@ -8,8 +9,11 @@ export function HosAuditTool() {
   const [cycleHoursUsed, setCycleHoursUsed] = useState<number>(48.5);
   const [sleeperFirstHours, setSleeperFirstHours] = useState<number>(8);
   const [sleeperSecondHours, setSleeperSecondHours] = useState<number>(2);
+  const [has30MinBreak, setHas30MinBreak] = useState<boolean>(true);
   const [aiHosAuditResult, setAiHosAuditResult] = useState<any | null>(null);
   const [isAuditingHos, setIsAuditingHos] = useState<boolean>(false);
+
+  const hos = evaluateHos({ drivingHours: drivingTime, onDutyHours: onDutyTime, cycleHoursUsed, has30MinBreak });
 
   const handleRunAiHosAudit = async () => {
     setIsAuditingHos(true);
@@ -21,6 +25,7 @@ export function HosAuditTool() {
           drivingHours: drivingTime,
           onDutyHours: onDutyTime,
           cycleHoursUsed,
+          has30MinBreak,
           isSplitSleeper: true,
           splitBreak1: sleeperFirstHours,
           splitBreak2: sleeperSecondHours
@@ -33,14 +38,20 @@ export function HosAuditTool() {
         throw new Error('HOS audit endpoint error');
       }
     } catch (e) {
-      const driveRemaining = Math.max(0, 11 - drivingTime);
-      const dutyRemaining = Math.max(0, 14 - (drivingTime + onDutyTime));
       setAiHosAuditResult({
-        isCompliant: drivingTime <= 11 && (drivingTime + onDutyTime) <= 14,
-        drivingRemainingHours: driveRemaining,
-        dutyRemainingHours: dutyRemaining,
-        fmcsaCitations: ['49 CFR § 395.3(a)(3) - 11-Hour Driving Limit', '49 CFR § 395.1(g) - Split Sleeper Berth'],
-        summary: `Calculated ${driveRemaining.toFixed(1)} hrs driving remaining. 10-hour reset or valid 8/2 / 7/3 split eligible.`
+        isCompliant: hos.isCompliant,
+        drivingRemainingHours: hos.drivingRemainingHours,
+        dutyRemainingHours: hos.dutyRemainingHours,
+        fmcsaCitations: [
+          '49 CFR § 395.3(a)(3) - 11-Hour Driving Limit',
+          '49 CFR § 395.3(a)(2) - 14-Hour On-Duty Window',
+          '49 CFR § 395.3(b) - 60/70-Hour Cycle',
+          '49 CFR § 395.1(g) - Split Sleeper Berth',
+        ],
+        summary: hos.isCompliant
+          ? `Compliant. ${hos.drivingRemainingHours.toFixed(1)} hrs driving, ${hos.dutyRemainingHours.toFixed(1)} hrs window, ${hos.cycleRemainingHours.toFixed(1)} hrs cycle remaining.`
+          : `Violation: ${hos.reasons.join('; ')}.`,
+        reasons: hos.reasons,
       });
     } finally {
       setIsAuditingHos(false);
@@ -122,6 +133,16 @@ export function HosAuditTool() {
           </div>
         </div>
 
+        <label className="flex items-center gap-2 text-xs font-bold text-slate-700">
+          <input
+            type="checkbox"
+            checked={has30MinBreak}
+            onChange={(e) => setHas30MinBreak(e.target.checked)}
+            className="w-4 h-4 accent-amber-500"
+          />
+          Took the required 30-minute break after 8 cumulative driving hours
+        </label>
+
         <button
           onClick={handleRunAiHosAudit}
           disabled={isAuditingHos}
@@ -153,7 +174,7 @@ export function HosAuditTool() {
           <div className="p-4 bg-sky-50 border border-sky-200 rounded-xl text-center">
             <span className="text-[10px] font-bold uppercase text-sky-800 block">70-Hr Cycle Left</span>
             <strong className="text-2xl font-black text-sky-900">
-              {Math.max(0, 70 - cycleHoursUsed).toFixed(1)} <span className="text-xs font-normal">hrs</span>
+              {hos.cycleRemainingHours.toFixed(1)} <span className="text-xs font-normal">hrs</span>
             </strong>
           </div>
         </div>
@@ -169,6 +190,13 @@ export function HosAuditTool() {
               </span>
             </div>
             <p className="text-xs text-zinc-300 leading-relaxed">{aiHosAuditResult.summary}</p>
+            {Array.isArray(aiHosAuditResult.reasons) && aiHosAuditResult.reasons.length > 0 && (
+              <ul className="text-[11px] text-red-300 list-disc list-inside space-y-0.5">
+                {aiHosAuditResult.reasons.map((r: string) => (
+                  <li key={r}>{r}</li>
+                ))}
+              </ul>
+            )}
             {aiHosAuditResult.fmcsaCitations && (
               <div className="text-[10px] text-zinc-400 pt-2 border-t border-slate-800">
                 Citations: {aiHosAuditResult.fmcsaCitations.join(', ')}

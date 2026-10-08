@@ -43,7 +43,7 @@ export function SubmitMileageModal({ isOpen, onClose, onSubmit, showToast }: Sub
         setRouteCorridor(preset.route);
         setRigUnit(`${preset.truck} (${preset.unit})`);
       }
-      showToast('✨ Dashboard Cluster OCR Validated: Digital readout verified authentic against Cummins ECM gateway!');
+      showToast('Dashboard reading captured. Enter or confirm the values and submit for review.');
     }, 1600);
   };
 
@@ -178,7 +178,7 @@ export function SubmitMileageModal({ isOpen, onClose, onSubmit, showToast }: Sub
                 {scanComplete && (
                   <div className="absolute top-4 left-4 right-4 bg-emerald-500/90 text-white p-2 rounded-lg text-[10px] font-black uppercase flex items-center space-x-2 animate-in slide-in-from-top-2">
                     <CheckCircle2 className="w-4 h-4" />
-                    <span>Metadata Authenticated: VIN Match & ECM Odometer Verified</span>
+                    <span>Reading captured — confirm the values, then submit for review</span>
                   </div>
                 )}
               </div>

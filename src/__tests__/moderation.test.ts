@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { toReportReason, rowToLiveReport } from '../lib/social-api';
+import { toReportReason, rowToLiveReport, moderationTargetTable } from '../lib/social-api';
 
 describe('moderation DB mapping', () => {
   it('maps free-text reasons onto the report_reason enum', () => {
@@ -25,5 +25,11 @@ describe('moderation DB mapping', () => {
     expect(r.targetRef).toBe('post-2');
     expect(r.status).toBe('open');
     expect(r.reason).toBe('spam');
+  });
+
+  it('removes road reports from the table the app actually writes (safety_reports)', () => {
+    expect(moderationTargetTable('road_report')).toBe('safety_reports');
+    expect(moderationTargetTable('listing')).toBe('listings');
+    expect(moderationTargetTable('post')).toBe('posts');
   });
 });

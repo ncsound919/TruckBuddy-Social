@@ -1,4 +1,5 @@
 import { supabase, currentUserId, isSupabaseConfigured } from './supabase';
+import { accumulateMiles } from './mileage';
 import {
   REACTION_TO_DB,
   profileToRow,
@@ -549,7 +550,8 @@ export async function submitLiveMileageProof(entry: MileageProof, driver: Profil
     miles_logged: entry.milesLogged,
     period: entry.dateLogged?.slice(0, 7),
     evidence_url: entry.proofImageUrl ?? null,
-    status: entry.status === 'verified' ? 'approved' : entry.status === 'flagged' ? 'rejected' : 'pending',
+    // Always submitted for review; the client cannot self-approve mileage.
+    status: 'pending',
     metadata: {
       method: entry.method,
       eldProvider: entry.eldProvider,
@@ -567,19 +569,29 @@ export async function submitLiveMileageProof(entry: MileageProof, driver: Profil
   if (proofError) throw proofError;
 
   const period = (entry.dateLogged || new Date().toISOString()).slice(0, 7);
+  // Accumulate into the period's existing total. Overwriting would erase every
+  // prior run in the same month; and is_verified stays false until reviewed.
+  const { data: existing } = await supabase
+    .from('mileage_entries')
+    .select('miles')
+    .eq('user_id', uid)
+    .eq('period', period)
+    .maybeSingle();
+  const total = accumulateMiles((existing as { miles?: number } | null)?.miles, entry.milesLogged);
+
   const { error: entryError } = await supabase.from('mileage_entries').upsert(
     {
       user_id: uid,
       period,
-      miles: entry.milesLogged,
-      is_verified: entry.status === 'verified',
+      miles: total,
+      is_verified: false,
       metadata: {
-        weeklyMiles: entry.milesLogged,
-        monthlyMiles: entry.milesLogged,
-        annualMiles: entry.milesLogged,
-        allTimeMiles: entry.milesLogged,
+        weeklyMiles: total,
+        monthlyMiles: total,
+        annualMiles: total,
+        allTimeMiles: total,
         driverCategory: driver.yearsExperience > 15 ? 'heavy_haul' : 'solo',
-        verifiedProofsCount: entry.status === 'verified' ? 1 : 0,
+        verifiedProofsCount: 0,
       },
     },
     { onConflict: 'user_id,period' },
@@ -714,6 +726,13 @@ function uuidv4(): string {
   });
 }
 
+/** The DB table that holds a reportable content type. */
+export function moderationTargetTable(type: string): 'posts' | 'listings' | 'safety_reports' {
+  if (type === 'listing') return 'listings';
+  if (type === 'road_report') return 'safety_reports';
+  return 'posts';
+}
+
 export async function createLiveReport(input: {
   targetType: 'post' | 'listing' | 'road_report';
   targetId: string;
@@ -756,8 +775,14 @@ export async function resolveLiveReport(
 
   if (action === 'remove_content' && report) {
     const r = report as { target_type: string; target_ref: string | null; target_id: string };
-    const table = r.target_type === 'listing' ? 'listings' : r.target_type === 'road_report' ? 'road_reports' : 'posts';
-    const key = r.target_ref && UUID_RE.test(r.target_ref) ? r.target_ref : r.target_id;
+    const table = moderationTargetTable(r.target_type);
+    // Only a real DB row (a UUID ref) can be hidden. A non-UUID ref is seed/demo
+    // content that is not in the database; fail loudly rather than reporting a
+    // removal that never happened.
+    const key = r.target_ref && UUID_RE.test(r.target_ref) ? r.target_ref : '';
+    if (!key) {
+      throw new Error('This content is not stored in the database and cannot be removed here.');
+    }
     const { error: contentError } = await supabase.from(table).update({ is_removed: true }).eq('id', key);
     if (contentError) throw contentError;
   }
