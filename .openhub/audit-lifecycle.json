@@ -1,6 +1,126 @@
 {
   "records": [
     {
+      "fingerprint": "dependencies|outdated-major|package.json|cdd2e945f570bbca",
+      "source": "deps_freshness",
+      "category": "outdated-major",
+      "dimension": "dependencies",
+      "severity": "medium",
+      "file": "package.json",
+      "status": "open",
+      "firstSeen": "2026-10-15T16:06:43.682Z",
+      "lastSeen": "2026-10-15T16:06:43.682Z",
+      "seenCount": 1
+    },
+    {
+      "fingerprint": "dependencies|outdated-major|package.json|ed5e4b6b65539788",
+      "source": "deps_freshness",
+      "category": "outdated-major",
+      "dimension": "dependencies",
+      "severity": "medium",
+      "file": "package.json",
+      "status": "open",
+      "firstSeen": "2026-10-15T16:06:43.682Z",
+      "lastSeen": "2026-10-15T16:06:43.682Z",
+      "seenCount": 1
+    },
+    {
+      "fingerprint": "dependencies|outdated-major|package.json|5da69a64b1a7ce8a",
+      "source": "deps_freshness",
+      "category": "outdated-major",
+      "dimension": "dependencies",
+      "severity": "medium",
+      "file": "package.json",
+      "status": "open",
+      "firstSeen": "2026-10-15T16:06:43.682Z",
+      "lastSeen": "2026-10-15T16:06:43.682Z",
+      "seenCount": 1
+    },
+    {
+      "fingerprint": "dependencies|outdated-major|package.json|138a242a533f1168",
+      "source": "deps_freshness",
+      "category": "outdated-major",
+      "dimension": "dependencies",
+      "severity": "medium",
+      "file": "package.json",
+      "status": "open",
+      "firstSeen": "2026-10-15T16:06:43.682Z",
+      "lastSeen": "2026-10-15T16:06:43.682Z",
+      "seenCount": 1
+    },
+    {
+      "fingerprint": "dependencies|outdated-major|package.json|0c6ade7665f22930",
+      "source": "deps_freshness",
+      "category": "outdated-major",
+      "dimension": "dependencies",
+      "severity": "medium",
+      "file": "package.json",
+      "status": "open",
+      "firstSeen": "2026-10-15T16:06:43.682Z",
+      "lastSeen": "2026-10-15T16:06:43.682Z",
+      "seenCount": 1
+    },
+    {
+      "fingerprint": "dependencies|outdated-major|package.json|ec84c87f6248dcc7",
+      "source": "deps_freshness",
+      "category": "outdated-major",
+      "dimension": "dependencies",
+      "severity": "medium",
+      "file": "package.json",
+      "status": "open",
+      "firstSeen": "2026-10-15T16:06:43.682Z",
+      "lastSeen": "2026-10-15T16:06:43.682Z",
+      "seenCount": 1
+    },
+    {
+      "fingerprint": "dependencies|outdated-major|package.json|b0a44e69ed50d441",
+      "source": "deps_freshness",
+      "category": "outdated-major",
+      "dimension": "dependencies",
+      "severity": "medium",
+      "file": "package.json",
+      "status": "open",
+      "firstSeen": "2026-10-15T16:06:43.682Z",
+      "lastSeen": "2026-10-15T16:06:43.682Z",
+      "seenCount": 1
+    },
+    {
+      "fingerprint": "dependencies|outdated-major|package.json|4584b43312b4cb7e",
+      "source": "deps_freshness",
+      "category": "outdated-major",
+      "dimension": "dependencies",
+      "severity": "medium",
+      "file": "package.json",
+      "status": "open",
+      "firstSeen": "2026-10-15T16:06:43.682Z",
+      "lastSeen": "2026-10-15T16:06:43.682Z",
+      "seenCount": 1
+    },
+    {
+      "fingerprint": "dependencies|outdated-major|package.json|80c5dbc0ed29a8f9",
+      "source": "deps_freshness",
+      "category": "outdated-major",
+      "dimension": "dependencies",
+      "severity": "medium",
+      "file": "package.json",
+      "status": "open",
+      "firstSeen": "2026-10-15T16:06:43.682Z",
+      "lastSeen": "2026-10-15T16:06:43.682Z",
+      "seenCount": 1
+    },
+    {
+      "fingerprint": "dependencies|outdated-major|package.json|7a5e7d5ff46f9a45",
+      "source": "deps_freshness",
+      "category": "outdated-major",
+      "dimension": "dependencies",
+      "severity": "medium",
+      "file": "package.json",
+      "status": "open",
+      "firstSeen": "2026-10-15T16:06:43.682Z",
+      "lastSeen": "2026-10-15T16:06:43.682Z",
+      "seenCount": 1
+    },
+    {
       "fingerprint": "correctness|security-logic|7f8e775fd8c0bd6c",
       "source": "eslint",
       "category": "security-logic",
@@ -4077,10 +4197,12 @@
       "dimension": "dependencies",
       "severity": "low",
       "file": "package.json",
-      "status": "open",
+      "status": "resolved",
       "firstSeen": "2026-10-08T03:51:33.788Z",
       "lastSeen": "2026-10-08T03:51:33.788Z",
-      "seenCount": 1
+      "seenCount": 1,
+      "resolvedAt": "2026-10-15T16:06:43.682Z",
+      "resolution": "fixed"
     },
     {
       "fingerprint": "dependencies|outdated-minor|package.json|1a5f7bbf6159a4e3",
@@ -4089,10 +4211,12 @@
       "dimension": "dependencies",
       "severity": "low",
       "file": "package.json",
-      "status": "open",
+      "status": "resolved",
       "firstSeen": "2026-10-08T03:51:33.788Z",
       "lastSeen": "2026-10-08T03:51:33.788Z",
-      "seenCount": 1
+      "seenCount": 1,
+      "resolvedAt": "2026-10-15T16:06:43.682Z",
+      "resolution": "fixed"
     },
     {
       "fingerprint": "dependencies|outdated-major|package.json|3ddcd03f45a81206",
@@ -4101,10 +4225,12 @@
       "dimension": "dependencies",
       "severity": "medium",
       "file": "package.json",
-      "status": "open",
+      "status": "resolved",
       "firstSeen": "2026-10-08T03:51:33.788Z",
       "lastSeen": "2026-10-08T03:51:33.788Z",
-      "seenCount": 1
+      "seenCount": 1,
+      "resolvedAt": "2026-10-15T16:06:43.682Z",
+      "resolution": "fixed"
     },
     {
       "fingerprint": "dependencies|outdated-major|package.json|ff5d16aef9ffa730",
@@ -4113,10 +4239,12 @@
       "dimension": "dependencies",
       "severity": "medium",
       "file": "package.json",
-      "status": "open",
+      "status": "resolved",
       "firstSeen": "2026-10-08T03:51:33.788Z",
       "lastSeen": "2026-10-08T03:51:33.788Z",
-      "seenCount": 1
+      "seenCount": 1,
+      "resolvedAt": "2026-10-15T16:06:43.682Z",
+      "resolution": "fixed"
     },
     {
       "fingerprint": "dependencies|outdated-major|package.json|ccd88303db1baf4c",
@@ -4125,10 +4253,12 @@
       "dimension": "dependencies",
       "severity": "medium",
       "file": "package.json",
-      "status": "open",
+      "status": "resolved",
       "firstSeen": "2026-10-08T03:51:33.788Z",
       "lastSeen": "2026-10-08T03:51:33.788Z",
-      "seenCount": 1
+      "seenCount": 1,
+      "resolvedAt": "2026-10-15T16:06:43.682Z",
+      "resolution": "fixed"
     },
     {
       "fingerprint": "dependencies|outdated-minor|package.json|1abfb913fc0d9704",
@@ -4137,10 +4267,12 @@
       "dimension": "dependencies",
       "severity": "low",
       "file": "package.json",
-      "status": "open",
+      "status": "resolved",
       "firstSeen": "2026-10-08T03:51:33.788Z",
       "lastSeen": "2026-10-08T03:51:33.788Z",
-      "seenCount": 1
+      "seenCount": 1,
+      "resolvedAt": "2026-10-15T16:06:43.682Z",
+      "resolution": "fixed"
     },
     {
       "fingerprint": "dependencies|outdated-major|package.json|4a1a4aafc8a7af1c",
@@ -4149,10 +4281,12 @@
       "dimension": "dependencies",
       "severity": "medium",
       "file": "package.json",
-      "status": "open",
+      "status": "resolved",
       "firstSeen": "2026-10-08T03:51:33.788Z",
       "lastSeen": "2026-10-08T03:51:33.788Z",
-      "seenCount": 1
+      "seenCount": 1,
+      "resolvedAt": "2026-10-15T16:06:43.682Z",
+      "resolution": "fixed"
     },
     {
       "fingerprint": "dependencies|outdated-minor|package.json|58508cbcbbc26b3e",
@@ -4161,10 +4295,12 @@
       "dimension": "dependencies",
       "severity": "low",
       "file": "package.json",
-      "status": "open",
+      "status": "resolved",
       "firstSeen": "2026-10-08T03:51:33.788Z",
       "lastSeen": "2026-10-08T03:51:33.788Z",
-      "seenCount": 1
+      "seenCount": 1,
+      "resolvedAt": "2026-10-15T16:06:43.682Z",
+      "resolution": "fixed"
     },
     {
       "fingerprint": "dependencies|outdated-major|package.json|05c31e32085dc4c2",
@@ -4173,10 +4309,12 @@
       "dimension": "dependencies",
       "severity": "medium",
       "file": "package.json",
-      "status": "open",
+      "status": "resolved",
       "firstSeen": "2026-10-08T03:51:33.788Z",
       "lastSeen": "2026-10-08T03:51:33.788Z",
-      "seenCount": 1
+      "seenCount": 1,
+      "resolvedAt": "2026-10-15T16:06:43.682Z",
+      "resolution": "fixed"
     },
     {
       "fingerprint": "dependencies|outdated-major|package.json|d4f9da5af4acb669",
@@ -4185,10 +4323,12 @@
       "dimension": "dependencies",
       "severity": "medium",
       "file": "package.json",
-      "status": "open",
+      "status": "resolved",
       "firstSeen": "2026-10-08T03:51:33.788Z",
       "lastSeen": "2026-10-08T03:51:33.788Z",
-      "seenCount": 1
+      "seenCount": 1,
+      "resolvedAt": "2026-10-15T16:06:43.682Z",
+      "resolution": "fixed"
     },
     {
       "fingerprint": "dependencies|outdated-major|package.json|22e6f85f7a66f49f",
@@ -4197,10 +4337,12 @@
       "dimension": "dependencies",
       "severity": "medium",
       "file": "package.json",
-      "status": "open",
+      "status": "resolved",
       "firstSeen": "2026-10-08T03:51:33.788Z",
       "lastSeen": "2026-10-08T03:51:33.788Z",
-      "seenCount": 1
+      "seenCount": 1,
+      "resolvedAt": "2026-10-15T16:06:43.682Z",
+      "resolution": "fixed"
     },
     {
       "fingerprint": "dependencies|outdated-minor|package.json|ea326274a5b7a94c",
@@ -4209,10 +4351,12 @@
       "dimension": "dependencies",
       "severity": "low",
       "file": "package.json",
-      "status": "open",
+      "status": "resolved",
       "firstSeen": "2026-10-08T03:51:33.788Z",
       "lastSeen": "2026-10-08T03:51:33.788Z",
-      "seenCount": 1
+      "seenCount": 1,
+      "resolvedAt": "2026-10-15T16:06:43.682Z",
+      "resolution": "fixed"
     },
     {
       "fingerprint": "dependencies|outdated-minor|package.json|595391f892819908",
@@ -4221,10 +4365,12 @@
       "dimension": "dependencies",
       "severity": "low",
       "file": "package.json",
-      "status": "open",
+      "status": "resolved",
       "firstSeen": "2026-10-08T03:51:33.788Z",
       "lastSeen": "2026-10-08T03:51:33.788Z",
-      "seenCount": 1
+      "seenCount": 1,
+      "resolvedAt": "2026-10-15T16:06:43.682Z",
+      "resolution": "fixed"
     },
     {
       "fingerprint": "dependencies|outdated-minor|package.json|39ce3707c21ec2bf",
@@ -4233,10 +4379,12 @@
       "dimension": "dependencies",
       "severity": "low",
       "file": "package.json",
-      "status": "open",
+      "status": "resolved",
       "firstSeen": "2026-10-08T03:51:33.788Z",
       "lastSeen": "2026-10-08T03:51:33.788Z",
-      "seenCount": 1
+      "seenCount": 1,
+      "resolvedAt": "2026-10-15T16:06:43.682Z",
+      "resolution": "fixed"
     },
     {
       "fingerprint": "dependencies|outdated-major|package.json|6e86a0610efdc27b",
@@ -4245,10 +4393,12 @@
       "dimension": "dependencies",
       "severity": "medium",
       "file": "package.json",
-      "status": "open",
+      "status": "resolved",
       "firstSeen": "2026-10-08T03:51:33.788Z",
       "lastSeen": "2026-10-08T03:51:33.788Z",
-      "seenCount": 1
+      "seenCount": 1,
+      "resolvedAt": "2026-10-15T16:06:43.682Z",
+      "resolution": "fixed"
     },
     {
       "fingerprint": "dependencies|outdated-major|package.json|4f72457c8023d7ab",
@@ -4257,10 +4407,12 @@
       "dimension": "dependencies",
       "severity": "medium",
       "file": "package.json",
-      "status": "open",
+      "status": "resolved",
       "firstSeen": "2026-10-08T03:51:33.788Z",
       "lastSeen": "2026-10-08T03:51:33.788Z",
-      "seenCount": 1
+      "seenCount": 1,
+      "resolvedAt": "2026-10-15T16:06:43.682Z",
+      "resolution": "fixed"
     },
     {
       "fingerprint": "dependencies|outdated-major|package.json|e1ad16e58bbe6ddf",
@@ -4269,10 +4421,12 @@
       "dimension": "dependencies",
       "severity": "medium",
       "file": "package.json",
-      "status": "open",
+      "status": "resolved",
       "firstSeen": "2026-10-08T03:51:33.788Z",
       "lastSeen": "2026-10-08T03:51:33.788Z",
-      "seenCount": 1
+      "seenCount": 1,
+      "resolvedAt": "2026-10-15T16:06:43.682Z",
+      "resolution": "fixed"
     },
     {
       "fingerprint": "dependencies|outdated-major|package.json|ddf54c5f41d0e9d6",
@@ -4281,10 +4435,12 @@
       "dimension": "dependencies",
       "severity": "medium",
       "file": "package.json",
-      "status": "open",
+      "status": "resolved",
       "firstSeen": "2026-10-08T03:51:33.788Z",
       "lastSeen": "2026-10-08T03:51:33.788Z",
-      "seenCount": 1
+      "seenCount": 1,
+      "resolvedAt": "2026-10-15T16:06:43.682Z",
+      "resolution": "fixed"
     },
     {
       "fingerprint": "licenses|license-missing|dd0ea2baf3e1486a",
